@@ -1,99 +1,151 @@
 import { LitElement, css, html } from 'lit';
-import { getTopScores, type LeaderboardEntry } from '../lib/leaderboard';
+import { customElement, state } from 'lit/decorators.js';
+import { clearLeaderboard, getLeaderboard, type LeaderboardEntry } from '../lib/leaderboard';
 
+@customElement('leaderboard-panel')
 export class LeaderboardPanel extends LitElement {
-  static properties = {
-    entries: { state: true },
-    isLoading: { state: true },
-    errorMessage: { state: true },
-  };
-
+  @state()
   private entries: LeaderboardEntry[] = [];
-  private isLoading = true;
-  private errorMessage: string | null = null;
 
   connectedCallback(): void {
     super.connectedCallback();
-    void this.loadScores();
+    this.refresh();
   }
 
-  private async loadScores(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = null;
+  private refresh(): void {
+    this.entries = getLeaderboard();
+  }
 
-    try {
-      this.entries = await getTopScores(10);
-    } catch (error) {
-      this.errorMessage = error instanceof Error ? error.message : 'Unable to load leaderboard';
-    } finally {
-      this.isLoading = false;
+  private onClear = (): void => {
+    clearLeaderboard();
+    this.refresh();
+    this.dispatchEvent(new CustomEvent('leaderboard-cleared', { bubbles: true, composed: true }));
+  };
+
+  private formatDate(value: string): string {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return '--';
     }
+    return date.toLocaleDateString();
   }
 
-  private renderTable(): string {
-    const rows = this.entries.map((entry) => [
-      String(entry.rank),
-      entry.name,
-      String(entry.score),
-      String(entry.level),
-      String(entry.systemsBreached),
-    ]);
-
-    const header = ['RANK', 'NAME', 'SCORE', 'LEVEL', 'BREACH'];
-    const widths = header.map((head, col) =>
-      Math.max(head.length, ...rows.map((row) => (row[col] ?? '').length))
+  private renderRows() {
+    return this.entries.map(
+      (entry, index) => html`
+        <tr class=${index === 0 ? 'top-rank' : ''}>
+          <td>#${index + 1}</td>
+          <td>${entry.score}</td>
+          <td>${entry.level}</td>
+          <td>${this.formatDate(entry.date)}</td>
+        </tr>
+      `,
     );
-
-    const border = `+${widths.map((width) => '-'.repeat(width + 2)).join('+')}+`;
-    const format = (cols: string[]) =>
-      `| ${cols.map((col, index) => col.padEnd(widths[index], ' ')).join(' | ')} |`;
-
-    return [
-      border,
-      format(header),
-      border,
-      ...rows.map((row) => format(row)),
-      border,
-    ].join('\n');
   }
 
   render() {
-    if (this.isLoading) {
-      return html`<pre>[ syncing leaderboard... ]</pre>`;
-    }
-
-    if (this.errorMessage) {
-      return html`<pre>[ error ] ${this.errorMessage}</pre>`;
-    }
-
-    if (this.entries.length === 0) {
-      return html`<pre>[ no leaderboard entries yet ]</pre>`;
-    }
-
-    return html`<pre>${this.renderTable()}</pre>`;
+    return html`
+      <section class="panel" aria-label="Leaderboard">
+        <header class="head">
+          <h2>TOP RUNS</h2>
+          <button type="button" @click=${this.onClear}>CLEAR</button>
+        </header>
+        ${this.entries.length === 0
+          ? html`<p class="empty">No runs yet</p>`
+          : html`
+              <table>
+                <thead>
+                  <tr>
+                    <th>RANK</th>
+                    <th>SCORE</th>
+                    <th>LEVEL</th>
+                    <th>DATE</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${this.renderRows()}
+                </tbody>
+              </table>
+            `}
+      </section>
+    `;
   }
 
   static styles = css`
     :host {
       display: block;
-      color: #81f781;
+      color: #92f6a5;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    .panel {
       background: #050505;
       border: 1px solid #1f7a1f;
       padding: 0.75rem;
-      font-family: 'IBM Plex Mono', 'Fira Code', 'Courier New', monospace;
       overflow-x: auto;
     }
 
-    pre {
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    h2 {
       margin: 0;
-      white-space: pre;
-      line-height: 1.4;
-      font-size: 0.875rem;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    button {
+      border: 1px solid #2f8a3f;
+      background: #031006;
+      color: inherit;
+      font: inherit;
+      padding: 0.2rem 0.45rem;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    button:hover,
+    button:focus-visible {
+      background: #0a2310;
+      outline: none;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    th,
+    td {
+      border: 1px solid #19561f;
+      padding: 0.3rem 0.4rem;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #63ff83;
+      letter-spacing: 0.03em;
+    }
+
+    .top-rank td {
+      color: #ffda66;
+      font-weight: 700;
+    }
+
+    .empty {
+      margin: 0.5rem 0 0;
+      color: #acd8af;
     }
   `;
 }
-
-customElements.define('leaderboard-panel', LeaderboardPanel);
 
 declare global {
   interface HTMLElementTagNameMap {
