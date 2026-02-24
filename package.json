@@ -11,6 +11,7 @@
     "pages:deploy": "wrangler pages deploy dist"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.97.0",
     "lit": "^3.2.1"
   },
   "devDependencies": {
