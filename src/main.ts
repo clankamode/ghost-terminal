@@ -1,2 +1,4 @@
 import './styles/global.css';
-import './app/cyber-app';
+import { CyberApp } from './app/cyber-app';
+
+customElements.define('cyber-app', CyberApp);

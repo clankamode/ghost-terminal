@@ -1,7 +1,5 @@
 import { LitElement, css, html } from 'lit';
-import { customElement } from 'lit/decorators.js';
 
-@customElement('cyber-app')
 export class CyberApp extends LitElement {
   static styles = css`
     :host {
@@ -48,13 +46,13 @@ export class CyberApp extends LitElement {
       <main class="terminal" role="main" aria-label="CyberLobster terminal">
         <section class="screen">
           <pre aria-label="CyberLobster logo">
-   ____      __             __          __               __            
-  / ___/_ __/ /  ___ ______/ /  ___ ___/ /  ___  ___ ___/ /____ ____    
- / /__/ // / _ \/ -_) __/ _  /  / -_) _  /__/ _ \/ -_|_-< __/ -_) __/    
- \___/\_, /_.__/\__/_/  \_,_/   \__/\_,_/(_)\___/\__/___/\__/\__/_/      
-      /___/                                                                
+   ____      __             __          __               __
+  / ___/_ __/ /  ___ ______/ /  ___ ___/ /  ___  ___ ___/ /____ ____
+ / /__/ // / _ \/ -_) __/ _  /  / -_) _  /__/ _ \/ -_|_-< __/ -_) __/
+ \___/\_, /_.__/\__/_/  \_,_/   \__/\_,_/(_)\___/\__/___/\__/\__/_/
+      /___/
           </pre>
-          <p class="boot">CyberLobster v0.1 -- INITIALIZING...</p>
+          <p class="boot">CyberLobster v0.1 - INITIALIZING...</p>
         </section>
       </main>
     `;
