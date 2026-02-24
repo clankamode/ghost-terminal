@@ -11,8 +11,12 @@ export type RunData = {
 };
 
 export async function saveRun(runData: RunData): Promise<string> {
-  const { data, error } = await supabase
-    .from('runs')
+  if (!supabase) {
+    throw new Error('Supabase is not configured. Cannot save run.');
+  }
+
+  const { data, error } = await (supabase as any)
+    .from('runs' as string)
     .insert({
       seed: runData.seed,
       level: runData.level,
@@ -21,7 +25,7 @@ export async function saveRun(runData: RunData): Promise<string> {
       time_elapsed: runData.timeElapsed,
       systems_breached: runData.systemsBreached,
       death_reason: runData.deathReason,
-    })
+    } as any)
     .select('id')
     .single();
 
@@ -29,12 +33,16 @@ export async function saveRun(runData: RunData): Promise<string> {
     throw new Error(`Failed to save run: ${error.message}`);
   }
 
-  return data.id;
+  return (data as { id: string }).id;
 }
 
 export async function getRun(id: string): Promise<RunData | null> {
-  const { data, error } = await supabase
-    .from('runs')
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await (supabase as any)
+    .from('runs' as string)
     .select('seed, level, score, puzzles_solved, time_elapsed, systems_breached, death_reason')
     .eq('id', id)
     .maybeSingle();
@@ -47,13 +55,23 @@ export async function getRun(id: string): Promise<RunData | null> {
     return null;
   }
 
+  const row = data as {
+    seed: string;
+    level: number;
+    score: number;
+    puzzles_solved: number;
+    time_elapsed: number;
+    systems_breached: number;
+    death_reason: string;
+  };
+
   return {
-    seed: data.seed,
-    level: data.level,
-    score: data.score,
-    puzzlesSolved: data.puzzles_solved,
-    timeElapsed: data.time_elapsed,
-    systemsBreached: data.systems_breached,
-    deathReason: data.death_reason,
+    seed: row.seed,
+    level: row.level,
+    score: row.score,
+    puzzlesSolved: row.puzzles_solved,
+    timeElapsed: row.time_elapsed,
+    systemsBreached: row.systems_breached,
+    deathReason: row.death_reason,
   };
 }

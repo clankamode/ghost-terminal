@@ -76,16 +76,16 @@ export type Database = {
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!hasSupabaseConfig) {
   console.warn(
     'Supabase env vars are missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable online features.'
   );
 }
 
-export const supabase: SupabaseClient<Database> = createClient<Database>(
-  supabaseUrl ?? '',
-  supabaseAnonKey ?? ''
-);
+export const supabase: SupabaseClient<Database> | null = hasSupabaseConfig
+  ? createClient<Database>(supabaseUrl as string, supabaseAnonKey as string)
+  : null;
 
 export type { Json };

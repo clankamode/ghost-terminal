@@ -18,25 +18,42 @@ export interface EventPayloadMap {
 type EventHandler<K extends GameEventType> = (payload: EventPayloadMap[K]) => void;
 
 export class EventBus {
-  private handlers: {
-    [K in GameEventType]?: Set<EventHandler<K>>;
-  } = {};
+  private readonly handlers = new Map<string, Set<Function>>();
 
   on<K extends GameEventType>(event: K, handler: EventHandler<K>): () => void {
-    if (!this.handlers[event]) {
-      this.handlers[event] = new Set<EventHandler<K>>();
+    const eventKey = event as string;
+    let eventHandlers = this.handlers.get(eventKey);
+
+    if (!eventHandlers) {
+      eventHandlers = new Set<Function>();
+      this.handlers.set(eventKey, eventHandlers);
     }
-    this.handlers[event]?.add(handler);
+
+    eventHandlers.add(handler as Function);
     return () => this.off(event, handler);
   }
 
   off<K extends GameEventType>(event: K, handler: EventHandler<K>): void {
-    this.handlers[event]?.delete(handler);
+    const eventKey = event as string;
+    const eventHandlers = this.handlers.get(eventKey);
+    if (!eventHandlers) {
+      return;
+    }
+
+    eventHandlers.delete(handler as Function);
+    if (eventHandlers.size === 0) {
+      this.handlers.delete(eventKey);
+    }
   }
 
   emit<K extends GameEventType>(event: K, payload: EventPayloadMap[K]): void {
-    this.handlers[event]?.forEach((handler) => {
-      handler(payload);
+    const eventHandlers = this.handlers.get(event as string);
+    if (!eventHandlers) {
+      return;
+    }
+
+    eventHandlers.forEach((handler) => {
+      (handler as EventHandler<K>)(payload);
     });
   }
 }

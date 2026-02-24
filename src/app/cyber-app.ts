@@ -89,6 +89,17 @@ export class CyberApp extends LitElement {
       margin: 0 auto;
     }
 
+    .boot-title {
+      margin: 0 0 0.5rem;
+      font-size: 1.5rem;
+      letter-spacing: 0.08em;
+    }
+
+    .boot-copy {
+      margin: 0 0 1rem;
+      opacity: 0.85;
+    }
+
     @media (max-width: 860px) {
       .layout {
         grid-template-columns: 1fr;
@@ -100,6 +111,8 @@ export class CyberApp extends LitElement {
     if (this.phase === 'boot') {
       return html`
         <div class="boot-wrap">
+          <h1 class="boot-title">CyberLobster</h1>
+          <p class="boot-copy">Initializing intrusion suite...</p>
           <boot-screen @boot-complete=${this.onBootComplete}></boot-screen>
         </div>
       `;
