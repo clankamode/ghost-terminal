@@ -1,6 +1,7 @@
 import type { HackTarget } from '../engine';
 import { CipherPuzzle } from './CipherPuzzle';
 import { LogicGatePuzzle } from './LogicGatePuzzle';
+import { MemoryMatrixPuzzle } from './MemoryMatrixPuzzle';
 import { PortScanPuzzle } from './PortScanPuzzle';
 import type { BasePuzzle } from './BasePuzzle';
 
@@ -17,7 +18,14 @@ export class PuzzleFactory {
       return new CipherPuzzle(difficulty);
     }
 
-    return new LogicGatePuzzle(difficulty);
+    if (this.isMemoryPuzzle(selectedType)) {
+      return new MemoryMatrixPuzzle(difficulty);
+    }
+
+    const fallbacks = [LogicGatePuzzle, CipherPuzzle, PortScanPuzzle, MemoryMatrixPuzzle];
+    const index = Math.floor(Math.random() * fallbacks.length);
+    const PuzzleType = fallbacks[index] ?? LogicGatePuzzle;
+    return new PuzzleType(difficulty);
   }
 
   private static pickPuzzleType(puzzleTypes: string[]): string {
@@ -37,5 +45,10 @@ export class PuzzleFactory {
   private static isCipherPuzzle(type: string): boolean {
     const normalized = type.toLowerCase();
     return normalized.includes('cipher') || normalized.includes('hash') || normalized.includes('quantum');
+  }
+
+  private static isMemoryPuzzle(type: string): boolean {
+    const normalized = type.toLowerCase();
+    return normalized.includes('memory') || normalized.includes('matrix') || normalized.includes('mapping');
   }
 }
