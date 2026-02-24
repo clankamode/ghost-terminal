@@ -34,6 +34,11 @@ export class StatusBar extends LitElement {
       flex-wrap: wrap;
       gap: 12px;
       align-items: center;
+      font-size: clamp(11px, 2.5vw, 14px);
+    }
+
+    .item {
+      white-space: nowrap;
     }
 
     .trace-high {
@@ -47,21 +52,27 @@ export class StatusBar extends LitElement {
         background: rgba(255, 77, 77, 0.25);
       }
     }
+
+    @media (max-width: 600px) {
+      .bar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px 10px;
+        align-items: start;
+        font-size: 13px;
+      }
+    }
   `;
 
   render() {
     const traceClass = this.tracePercent > 75 ? 'trace-high' : '';
     return html`
       <div class="bar">
-        <span>LEVEL ${this.level}</span>
-        <span>|</span>
-        <span>SCORE ${this.score}</span>
-        <span>|</span>
-        <span>LIVES ${this.lives}</span>
-        <span>|</span>
-        <span>TIME ${this.time}s</span>
-        <span>|</span>
-        <span class=${traceClass}>TRACE ${this.tracePercent}%</span>
+        <span class="item">LEVEL ${this.level}</span>
+        <span class="item">SCORE ${this.score}</span>
+        <span class="item">LIVES ${this.lives}</span>
+        <span class="item">TIME ${this.time}s</span>
+        <span class="item ${traceClass}">TRACE ${this.tracePercent}%</span>
       </div>
     `;
   }

@@ -68,6 +68,7 @@ export class CyberApp extends LitElement {
         #010401;
       padding: 1rem;
       box-sizing: border-box;
+      touch-action: manipulation;
     }
 
     .shell {
@@ -103,6 +104,21 @@ export class CyberApp extends LitElement {
     @media (max-width: 860px) {
       .layout {
         grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      :host {
+        padding: 0.5rem;
+      }
+
+      .layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .shell,
+      .layout {
+        gap: 0.5rem;
       }
     }
   `;

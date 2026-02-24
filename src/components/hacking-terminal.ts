@@ -33,7 +33,8 @@ export class HackingTerminal extends LitElement {
       min-height: 320px;
       padding: 12px;
       position: relative;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     :host::before {
@@ -58,7 +59,7 @@ export class HackingTerminal extends LitElement {
 
     .history {
       min-height: 260px;
-      max-height: 340px;
+      max-height: min(240px, 35vh);
       overflow-y: auto;
       white-space: pre-wrap;
       word-break: break-word;
@@ -110,6 +111,16 @@ export class HackingTerminal extends LitElement {
     @keyframes blink {
       50% {
         opacity: 0;
+      }
+    }
+
+    @media (max-width: 600px) {
+      :host {
+        min-height: min(280px, 40vh);
+      }
+
+      input {
+        font-size: 16px;
       }
     }
   `;
