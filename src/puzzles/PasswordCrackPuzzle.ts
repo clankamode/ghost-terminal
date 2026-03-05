@@ -9,8 +9,8 @@ export class PasswordCrackPuzzle extends BasePuzzle {
   private hintOrder: number[] = [];
   private hintedPositions = new Set<number>();
 
-  constructor(difficulty: number) {
-    super(35 + difficulty * 20, difficulty);
+  constructor(difficulty: number, rng: () => number = Math.random) {
+    super(35 + difficulty * 20, difficulty, rng);
   }
 
   start(): string {
@@ -102,18 +102,5 @@ export class PasswordCrackPuzzle extends BasePuzzle {
     }
 
     return result;
-  }
-
-  private shuffle<T>(values: T[]): T[] {
-    for (let i = values.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [values[i], values[j]] = [values[j], values[i]];
-    }
-
-    return values;
-  }
-
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }

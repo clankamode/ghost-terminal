@@ -19,8 +19,8 @@ export class CipherPuzzle extends BasePuzzle {
   private encodedText = '';
   private hintIndex = 0;
 
-  constructor(difficulty: number) {
-    super(45 + difficulty * 20, difficulty);
+  constructor(difficulty: number, rng: () => number = Math.random) {
+    super(45 + difficulty * 20, difficulty, rng);
   }
 
   start(): string {
@@ -133,9 +133,5 @@ export class CipherPuzzle extends BasePuzzle {
         return String.fromCharCode((25 - code) + base);
       })
       .join('');
-  }
-
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }

@@ -19,8 +19,8 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
   private hintedCells = 0;
   private hideTimer?: number;
 
-  constructor(difficulty: number) {
-    super(30 + difficulty * 15, difficulty);
+  constructor(difficulty: number, rng: () => number = Math.random) {
+    super(30 + difficulty * 15, difficulty, rng);
   }
 
   start(): string {
@@ -178,9 +178,5 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
 
   private renderSolution(): string {
     return this.cells.map((cell) => `${ROW_LABELS[cell.row]}${cell.col + 1}=${cell.symbol}`).join(', ');
-  }
-
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }

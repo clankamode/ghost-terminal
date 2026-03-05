@@ -8,8 +8,8 @@ export class LogicGatePuzzle extends BasePuzzle {
   private gates: Gate[] = [];
   private expectedOutput = 0;
 
-  constructor(difficulty: number) {
-    super(30 + difficulty * 25, difficulty);
+  constructor(difficulty: number, rng: () => number = Math.random) {
+    super(30 + difficulty * 25, difficulty, rng);
   }
 
   start(): string {
@@ -97,10 +97,6 @@ export class LogicGatePuzzle extends BasePuzzle {
   }
 
   private randomBit(): number {
-    return Math.random() < 0.5 ? 0 : 1;
-  }
-
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+    return this.randomBool() ? 1 : 0;
   }
 }
