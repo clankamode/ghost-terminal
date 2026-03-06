@@ -6,7 +6,7 @@
 - [ ] Make puzzle generation deterministic in tests by injecting RNG instead of relying on `Math.random()` throughout puzzle classes and `PuzzleFactory`.
 - [x] Align `LevelGenerator` puzzle type strings with `PuzzleFactory` routing so generated puzzle types map to concrete puzzle implementations instead of frequent random fallback. (completed 2026-03-05: expanded routing predicates + regression tests in `src/puzzles/PuzzleFactory.test.ts`)
 - [x] Wire `PasswordCrackPuzzle` into `PuzzleFactory` selection logic (it exists but is not intentionally selected today). (completed 2026-03-05: added explicit password route in `src/puzzles/PuzzleFactory.ts`)
-- [ ] Define consistent failure/attempt behavior for `PortScanPuzzle` wrong answers (numeric misses currently never hard-fail), and keep this consistent with other puzzle penalties.
+- [x] Define consistent failure/attempt behavior for `PortScanPuzzle` wrong answers (numeric misses currently never hard-fail), and keep this consistent with other puzzle penalties. (completed 2026-03-06: added 3-attempt lockout + terminal feedback for bad input/wrong ports, with puzzle-flow coverage for fail threshold and success-before-lockout regression)
 
 ## 🟡 Medium Priority
 - [ ] Add lifecycle cleanup hooks for puzzle instances (for example `MemoryMatrixPuzzle` timers) to prevent dangling timers/event emissions after puzzle exit.

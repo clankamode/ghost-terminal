@@ -1,4 +1,4 @@
-import { BasePuzzle } from './BasePuzzle';
+import { BasePuzzle, type PuzzleRng } from './BasePuzzle';
 
 interface PortEntry {
   port: number;
@@ -18,36 +18,65 @@ const SERVICE_POOL = [
   { service: 'RDP', secure: true },
 ];
 
+const MAX_ATTEMPTS = 3;
+
 export class PortScanPuzzle extends BasePuzzle {
   private ports: PortEntry[] = [];
   private vulnerablePort = 0;
   private clue = '';
+  private attemptsUsed = 0;
 
-  constructor(difficulty: number) {
-    super(40 + difficulty * 20, difficulty);
+  constructor(difficulty: number, rng?: PuzzleRng) {
+    super(40 + difficulty * 20, difficulty, rng);
   }
 
   start(): string {
     this.buildPorts();
+    this.attemptsUsed = 0;
+
     const rows = this.ports
       .map((entry) => `${entry.port}/tcp  ${entry.service}  ${entry.version}`)
       .join('\n');
 
-    return ['Scan result:', rows, `Clue: ${this.clue}`, 'Type the vulnerable port number.'].join('\n');
+    return [
+      'Scan result:',
+      rows,
+      `Clue: ${this.clue}`,
+      `Type the vulnerable port number. Attempts: ${MAX_ATTEMPTS}.`,
+    ].join('\n');
   }
 
   solve(input: string): boolean {
-    const parsed = Number.parseInt(this.normalizeInput(input), 10);
-    const isCorrect = Number.isFinite(parsed) && parsed === this.vulnerablePort;
+    const normalized = this.normalizeInput(input);
+    if (!/^\d+$/.test(normalized)) {
+      this.dispatchEvent(
+        new CustomEvent<string>('terminal-feedback', {
+          detail: 'Input must be a port number.',
+        }),
+      );
+      return false;
+    }
 
+    const parsed = Number.parseInt(normalized, 10);
+    const isCorrect = parsed === this.vulnerablePort;
     if (isCorrect) {
       this.markSolved();
       return true;
     }
 
-    if (!Number.isFinite(parsed)) {
-      this.markFailed('Input must be a port number.');
+    this.attemptsUsed += 1;
+    const attemptsLeft = MAX_ATTEMPTS - this.attemptsUsed;
+
+    if (attemptsLeft <= 0) {
+      this.markFailed(`Port scan lockout. Vulnerable port was ${this.vulnerablePort}.`);
+      return false;
     }
+
+    this.dispatchEvent(
+      new CustomEvent<string>('terminal-feedback', {
+        detail: `Incorrect port. Attempts left: ${attemptsLeft}.`,
+      }),
+    );
 
     return false;
   }
@@ -92,14 +121,11 @@ export class PortScanPuzzle extends BasePuzzle {
 
   private shuffle<T>(values: T[]): T[] {
     for (let i = values.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = this.randomInt(0, i);
       [values[i], values[j]] = [values[j], values[i]];
     }
 
     return values;
   }
 
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
 }
