@@ -18,10 +18,13 @@ const SERVICE_POOL = [
   { service: 'RDP', secure: true },
 ];
 
+const MAX_ATTEMPTS = 3;
+
 export class PortScanPuzzle extends BasePuzzle {
   private ports: PortEntry[] = [];
   private vulnerablePort = 0;
   private clue = '';
+  private attemptsUsed = 0;
 
   constructor(difficulty: number) {
     super(40 + difficulty * 20, difficulty);
@@ -29,25 +32,51 @@ export class PortScanPuzzle extends BasePuzzle {
 
   start(): string {
     this.buildPorts();
+    this.attemptsUsed = 0;
     const rows = this.ports
       .map((entry) => `${entry.port}/tcp  ${entry.service}  ${entry.version}`)
       .join('\n');
 
-    return ['Scan result:', rows, `Clue: ${this.clue}`, 'Type the vulnerable port number.'].join('\n');
+    return [
+      'Scan result:',
+      rows,
+      `Clue: ${this.clue}`,
+      `Type the vulnerable port number. Attempts: ${MAX_ATTEMPTS}.`,
+    ].join('\n');
   }
 
   solve(input: string): boolean {
-    const parsed = Number.parseInt(this.normalizeInput(input), 10);
-    const isCorrect = Number.isFinite(parsed) && parsed === this.vulnerablePort;
+    const normalized = this.normalizeInput(input);
+    if (!/^\d+$/.test(normalized)) {
+      this.dispatchEvent(
+        new CustomEvent<string>('terminal-feedback', {
+          detail: 'Input must be a port number.',
+        }),
+      );
+      return false;
+    }
+
+    const parsed = Number.parseInt(normalized, 10);
+    const isCorrect = parsed === this.vulnerablePort;
 
     if (isCorrect) {
       this.markSolved();
       return true;
     }
 
-    if (!Number.isFinite(parsed)) {
-      this.markFailed('Input must be a port number.');
+    this.attemptsUsed += 1;
+    const attemptsLeft = MAX_ATTEMPTS - this.attemptsUsed;
+
+    if (attemptsLeft <= 0) {
+      this.markFailed(`Port scan lockout. Vulnerable port was ${this.vulnerablePort}.`);
+      return false;
     }
+
+    this.dispatchEvent(
+      new CustomEvent<string>('terminal-feedback', {
+        detail: `Incorrect port. Attempts left: ${attemptsLeft}.`,
+      }),
+    );
 
     return false;
   }

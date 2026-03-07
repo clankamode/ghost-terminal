@@ -64,4 +64,38 @@ describe('Puzzle flows', () => {
     expect(failedEvents[0]?.reason).toContain('Out of guesses. PIN was 1234.');
     expect(randomSpy).toHaveBeenCalled();
   });
+
+  it('fails PortScanPuzzle after max numeric misses and does not consume attempts on invalid input', () => {
+    const puzzle = new PortScanPuzzle(2);
+    puzzle.start();
+
+    const vulnerable = puzzle.getPorts().find((entry) => entry.vulnerable);
+    expect(vulnerable).toBeDefined();
+
+    const wrongPort = puzzle.getPorts().find((entry) => entry.port !== vulnerable!.port)?.port;
+    expect(wrongPort).toBeDefined();
+
+    const feedback: string[] = [];
+    const failedEvents: Array<{ reason?: string }> = [];
+
+    puzzle.addEventListener('terminal-feedback', (event) => {
+      feedback.push((event as CustomEvent<string>).detail);
+    });
+
+    puzzle.addEventListener('puzzle-failed', (event) => {
+      failedEvents.push((event as CustomEvent<{ reason?: string }>).detail);
+    });
+
+    expect(puzzle.solve('abc')).toBe(false);
+    expect(feedback.at(-1)).toBe('Input must be a port number.');
+
+    expect(puzzle.solve(String(wrongPort))).toBe(false);
+    expect(puzzle.solve(String(wrongPort))).toBe(false);
+    expect(puzzle.solve(String(wrongPort))).toBe(false);
+
+    expect(feedback).toContain('Incorrect port. Attempts left: 2.');
+    expect(feedback).toContain('Incorrect port. Attempts left: 1.');
+    expect(failedEvents).toHaveLength(1);
+    expect(failedEvents[0]?.reason).toBe(`Port scan lockout. Vulnerable port was ${vulnerable!.port}.`);
+  });
 });
