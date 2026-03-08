@@ -77,6 +77,7 @@ describe('Puzzle flows', () => {
 
     const feedback: string[] = [];
     const failedEvents: Array<{ reason?: string }> = [];
+    const solvedEvents: Array<{ puzzle: string; difficulty: number }> = [];
 
     puzzle.addEventListener('terminal-feedback', (event) => {
       feedback.push((event as CustomEvent<string>).detail);
@@ -84,6 +85,10 @@ describe('Puzzle flows', () => {
 
     puzzle.addEventListener('puzzle-failed', (event) => {
       failedEvents.push((event as CustomEvent<{ reason?: string }>).detail);
+    });
+
+    puzzle.addEventListener('puzzle-solved', (event) => {
+      solvedEvents.push((event as CustomEvent<{ puzzle: string; difficulty: number }>).detail);
     });
 
     expect(puzzle.solve('abc')).toBe(false);
@@ -97,5 +102,9 @@ describe('Puzzle flows', () => {
     expect(feedback).toContain('Incorrect port. Attempts left: 1.');
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0]?.reason).toBe(`Port scan lockout. Vulnerable port was ${vulnerable!.port}.`);
+
+    expect(puzzle.solve(String(vulnerable!.port))).toBe(false);
+    expect(feedback.at(-1)).toBe(`Port scan lockout active. Vulnerable port was ${vulnerable!.port}.`);
+    expect(solvedEvents).toHaveLength(0);
   });
 });

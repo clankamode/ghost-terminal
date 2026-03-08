@@ -25,6 +25,7 @@ export class PortScanPuzzle extends BasePuzzle {
   private vulnerablePort = 0;
   private clue = '';
   private attemptsUsed = 0;
+  private lockedOut = false;
 
   constructor(difficulty: number) {
     super(40 + difficulty * 20, difficulty);
@@ -33,6 +34,7 @@ export class PortScanPuzzle extends BasePuzzle {
   start(): string {
     this.buildPorts();
     this.attemptsUsed = 0;
+    this.lockedOut = false;
     const rows = this.ports
       .map((entry) => `${entry.port}/tcp  ${entry.service}  ${entry.version}`)
       .join('\n');
@@ -46,6 +48,15 @@ export class PortScanPuzzle extends BasePuzzle {
   }
 
   solve(input: string): boolean {
+    if (this.lockedOut) {
+      this.dispatchEvent(
+        new CustomEvent<string>('terminal-feedback', {
+          detail: `Port scan lockout active. Vulnerable port was ${this.vulnerablePort}.`,
+        }),
+      );
+      return false;
+    }
+
     const normalized = this.normalizeInput(input);
     if (!/^\d+$/.test(normalized)) {
       this.dispatchEvent(
@@ -68,6 +79,7 @@ export class PortScanPuzzle extends BasePuzzle {
     const attemptsLeft = MAX_ATTEMPTS - this.attemptsUsed;
 
     if (attemptsLeft <= 0) {
+      this.lockedOut = true;
       this.markFailed(`Port scan lockout. Vulnerable port was ${this.vulnerablePort}.`);
       return false;
     }
