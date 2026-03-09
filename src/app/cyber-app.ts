@@ -499,8 +499,7 @@ export class CyberApp extends LitElement {
     if (this.mapNodes.every((node) => node.state === 'breached')) {
       this.advanceToNextLevel();
     } else {
-      this.activePuzzle = null;
-      this.activeTarget = null;
+      this.teardownPuzzle();
       this.selectedNodeId = '';
       terminal?.printLine('Select next ACCESSIBLE node.', '#7cc9ff');
     }
@@ -531,8 +530,7 @@ export class CyberApp extends LitElement {
     );
     terminal?.printLine(`Penalty -${penalty}. Lives remaining: ${nextLives}.`);
 
-    this.activePuzzle = null;
-    this.activeTarget = null;
+    this.teardownPuzzle();
     this.selectedNodeId = '';
   }
 
@@ -605,6 +603,8 @@ export class CyberApp extends LitElement {
   private teardownPuzzle(): void {
     this.puzzleUnsubscribers.forEach((unsubscribe) => unsubscribe());
     this.puzzleUnsubscribers = [];
+
+    this.activePuzzle?.dispose();
     this.activePuzzle = null;
     this.activeTarget = null;
   }

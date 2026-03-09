@@ -18,6 +18,7 @@ export abstract class BasePuzzle extends EventTarget {
 
   private isCompleted = false;
   private isFailed = false;
+  private isDisposed = false;
 
   protected constructor(timeLimit: number, difficulty: number, rng: PuzzleRng = defaultPuzzleRng) {
     super();
@@ -30,8 +31,16 @@ export abstract class BasePuzzle extends EventTarget {
   abstract solve(input: string): boolean;
   abstract getHint(): string;
 
+  dispose(): void {
+    this.isDisposed = true;
+  }
+
+  protected isActive(): boolean {
+    return !this.isDisposed;
+  }
+
   protected markSolved(): void {
-    if (this.isCompleted || this.isFailed) {
+    if (this.isCompleted || this.isFailed || this.isDisposed) {
       return;
     }
 
@@ -47,7 +56,7 @@ export abstract class BasePuzzle extends EventTarget {
   }
 
   protected markFailed(reason?: string): void {
-    if (this.isCompleted || this.isFailed) {
+    if (this.isCompleted || this.isFailed || this.isDisposed) {
       return;
     }
 

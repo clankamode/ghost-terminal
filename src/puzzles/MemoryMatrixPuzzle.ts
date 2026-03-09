@@ -25,9 +25,7 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
   }
 
   start(): string {
-    if (this.hideTimer !== undefined) {
-      window.clearTimeout(this.hideTimer);
-    }
+    this.clearHideTimer();
 
     this.displayMs = Math.max(800, 2000 - (this.difficulty - 1) * 180);
     this.attemptsUsed = 0;
@@ -36,6 +34,12 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
     this.cells = this.buildCells();
 
     this.hideTimer = window.setTimeout(() => {
+      this.hideTimer = undefined;
+
+      if (!this.isActive()) {
+        return;
+      }
+
       this.hidden = true;
       this.dispatchEvent(new CustomEvent('terminal-clear'));
       this.dispatchEvent(
@@ -54,6 +58,10 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
   }
 
   solve(input: string): boolean {
+    if (!this.isActive()) {
+      return false;
+    }
+
     if (!this.hidden) {
       this.dispatchEvent(
         new CustomEvent<string>('terminal-feedback', {
@@ -98,6 +106,10 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
       return 'Hint unavailable until the matrix is hidden.';
     }
 
+    if (!this.isActive()) {
+      return 'Puzzle session closed.';
+    }
+
     if (this.hintedCells >= this.cells.length) {
       return 'All memory cells already revealed.';
     }
@@ -105,6 +117,18 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
     const cell = this.cells[this.hintedCells];
     this.hintedCells += 1;
     return `Hint: ${ROW_LABELS[cell.row]}${cell.col + 1}=${cell.symbol}`;
+  }
+
+  override dispose(): void {
+    this.clearHideTimer();
+    super.dispose();
+  }
+
+  private clearHideTimer(): void {
+    if (this.hideTimer !== undefined) {
+      window.clearTimeout(this.hideTimer);
+      this.hideTimer = undefined;
+    }
   }
 
   private buildCells(): MemoryCell[] {
