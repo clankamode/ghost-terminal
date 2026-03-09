@@ -1,4 +1,5 @@
 import { BasePuzzle } from './BasePuzzle';
+import { defaultPuzzleRng, type PuzzleRng } from './rng';
 
 interface PortEntry {
   port: number;
@@ -27,8 +28,8 @@ export class PortScanPuzzle extends BasePuzzle {
   private attemptsUsed = 0;
   private lockedOut = false;
 
-  constructor(difficulty: number) {
-    super(40 + difficulty * 20, difficulty);
+  constructor(difficulty: number, rng: PuzzleRng = defaultPuzzleRng) {
+    super(40 + difficulty * 20, difficulty, rng);
   }
 
   start(): string {
@@ -129,18 +130,5 @@ export class PortScanPuzzle extends BasePuzzle {
     const vulnerable = this.ports[vulnerableIndex];
     this.vulnerablePort = vulnerable.port;
     this.clue = `Find the port running an outdated ${vulnerable.service} service.`;
-  }
-
-  private shuffle<T>(values: T[]): T[] {
-    for (let i = values.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [values[i], values[j]] = [values[j], values[i]];
-    }
-
-    return values;
-  }
-
-  private randomInt(min: number, max: number): number {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 }

@@ -1,13 +1,22 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { PasswordCrackPuzzle } from './PasswordCrackPuzzle';
 import { PortScanPuzzle } from './PortScanPuzzle';
 
-describe('Puzzle flows', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+function createSequenceRng(values: number[]): () => number {
+  let index = 0;
+  return (): number => {
+    const next = values[index];
+    if (next === undefined) {
+      throw new Error(`RNG exhausted at call ${index + 1}`);
+    }
 
+    index += 1;
+    return next;
+  };
+}
+
+describe('Puzzle flows', () => {
   it('solves PortScanPuzzle when vulnerable port is provided', () => {
     const puzzle = new PortScanPuzzle(2);
     puzzle.start();
@@ -32,16 +41,7 @@ describe('Puzzle flows', () => {
   });
 
   it('fails PasswordCrackPuzzle after max wrong guesses and emits feedback', () => {
-    // PIN generation (4 digits) + hint-order shuffle (3 random calls)
-    const randomSpy = vi
-      .spyOn(Math, 'random')
-      .mockReturnValueOnce(0.1)
-      .mockReturnValueOnce(0.2)
-      .mockReturnValueOnce(0.3)
-      .mockReturnValueOnce(0.4)
-      .mockReturnValue(0);
-
-    const puzzle = new PasswordCrackPuzzle(1);
+    const puzzle = new PasswordCrackPuzzle(1, createSequenceRng([0.1, 0.2, 0.3, 0.4, 0, 0, 0]));
     puzzle.start();
 
     const feedback: string[] = [];
@@ -62,7 +62,6 @@ describe('Puzzle flows', () => {
     expect(feedback.length).toBe(8);
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0]?.reason).toContain('Out of guesses. PIN was 1234.');
-    expect(randomSpy).toHaveBeenCalled();
   });
 
   it('fails PortScanPuzzle after max numeric misses and does not consume attempts on invalid input', () => {

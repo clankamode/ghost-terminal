@@ -3,7 +3,7 @@
 
 ## 🔴 High Priority
 - [x] Add automated tests for `src/engine/*` and `src/puzzles/*` (state transitions, scoring events, puzzle solve/fail paths); current logic has effectively no test coverage. (completed 2026-03-05: added `src/engine/engine.test.ts` and `src/puzzles/puzzle-flows.test.ts` covering EventBus/GameStore/LevelGenerator transitions and puzzle solve+fail event paths)
-- [ ] Make puzzle generation deterministic in tests by injecting RNG instead of relying on `Math.random()` throughout puzzle classes and `PuzzleFactory`.
+- [x] Make puzzle generation deterministic in tests by injecting RNG instead of relying on `Math.random()` throughout puzzle classes and `PuzzleFactory`. (completed 2026-03-09: added injectable puzzle RNG with `Math.random` defaults, threaded it through `PuzzleFactory` and randomizing puzzle classes, and added deterministic seeded tests)
 - [x] Align `LevelGenerator` puzzle type strings with `PuzzleFactory` routing so generated puzzle types map to concrete puzzle implementations instead of frequent random fallback. (completed 2026-03-05: expanded routing predicates + regression tests in `src/puzzles/PuzzleFactory.test.ts`)
 - [x] Wire `PasswordCrackPuzzle` into `PuzzleFactory` selection logic (it exists but is not intentionally selected today). (completed 2026-03-05: added explicit password route in `src/puzzles/PuzzleFactory.ts`)
 - [x] Define consistent failure/attempt behavior for `PortScanPuzzle` wrong answers (numeric misses currently never hard-fail), and keep this consistent with other puzzle penalties. (completed 2026-03-08: added 3-attempt numeric lockout with failure event/feedback parity and tests for invalid input, miss countdown, and hard-fail lockout behavior)

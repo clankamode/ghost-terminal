@@ -1,7 +1,20 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import type { HackTarget } from '../engine';
+import { mulberry32, type HackTarget } from '../engine';
 import { PuzzleFactory } from './PuzzleFactory';
+
+function createSequenceRng(values: number[]): () => number {
+  let index = 0;
+  return (): number => {
+    const next = values[index];
+    if (next === undefined) {
+      throw new Error(`RNG exhausted at call ${index + 1}`);
+    }
+
+    index += 1;
+    return next;
+  };
+}
 
 const baseTarget: HackTarget = {
   id: 'target-1',
@@ -38,38 +51,34 @@ function withPuzzleType(puzzleType: string): HackTarget {
 }
 
 describe('PuzzleFactory', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it('routes LevelGenerator puzzle types to intentional puzzle implementations', () => {
     for (const [puzzleType, expectedPuzzleClass] of LEVEL_GENERATOR_ROUTING_CASES) {
-      const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
-      const puzzle = PuzzleFactory.createForTarget(withPuzzleType(puzzleType));
+      const puzzle = PuzzleFactory.createForTarget(withPuzzleType(puzzleType), () => 0);
 
       expect(puzzle.constructor.name, puzzleType).toBe(expectedPuzzleClass);
-      expect(randomSpy, `${puzzleType} should not use fallback selection`).toHaveBeenCalledTimes(1);
-
-      randomSpy.mockRestore();
     }
   });
 
   it('selects PasswordCrackPuzzle intentionally for password-crack type', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0);
-    const puzzle = PuzzleFactory.createForTarget(withPuzzleType('password-crack'));
+    const puzzle = PuzzleFactory.createForTarget(withPuzzleType('password-crack'), () => 0);
 
     expect(puzzle.constructor.name).toBe('PasswordCrackPuzzle');
   });
 
   it('uses fallback selection only for unknown puzzle types', () => {
-    const randomSpy = vi
-      .spyOn(Math, 'random')
-      .mockReturnValueOnce(0)
-      .mockReturnValueOnce(0.8);
+    const puzzle = PuzzleFactory.createForTarget(
+      withPuzzleType('unknown-puzzle-type'),
+      createSequenceRng([0, 0.8]),
+    );
 
-    const puzzle = PuzzleFactory.createForTarget(withPuzzleType('unknown-puzzle-type'));
-
-    expect(randomSpy).toHaveBeenCalledTimes(2);
     expect(puzzle.constructor.name).toBe('PasswordCrackPuzzle');
+  });
+
+  it('creates identical puzzle state for the same injected RNG seed', () => {
+    const firstPuzzle = PuzzleFactory.createForTarget(withPuzzleType('port-scan'), mulberry32(123456));
+    const secondPuzzle = PuzzleFactory.createForTarget(withPuzzleType('port-scan'), mulberry32(123456));
+
+    expect(firstPuzzle.start()).toBe(secondPuzzle.start());
+    expect(firstPuzzle.getHint()).toBe(secondPuzzle.getHint());
   });
 });

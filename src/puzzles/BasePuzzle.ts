@@ -1,3 +1,5 @@
+import { defaultPuzzleRng, type PuzzleRng } from './rng';
+
 export interface PuzzleSolvedDetail {
   puzzle: string;
   difficulty: number;
@@ -12,14 +14,16 @@ export interface PuzzleFailedDetail {
 export abstract class BasePuzzle extends EventTarget {
   public readonly timeLimit: number;
   public readonly difficulty: number;
+  protected readonly rng: PuzzleRng;
 
   private isCompleted = false;
   private isFailed = false;
 
-  protected constructor(timeLimit: number, difficulty: number) {
+  protected constructor(timeLimit: number, difficulty: number, rng: PuzzleRng = defaultPuzzleRng) {
     super();
     this.timeLimit = timeLimit;
     this.difficulty = difficulty;
+    this.rng = rng;
   }
 
   abstract start(): string;
@@ -61,5 +65,18 @@ export abstract class BasePuzzle extends EventTarget {
 
   protected normalizeInput(input: string): string {
     return input.trim();
+  }
+
+  protected randomInt(min: number, max: number): number {
+    return Math.floor(this.rng() * (max - min + 1)) + min;
+  }
+
+  protected shuffle<T>(values: T[]): T[] {
+    for (let i = values.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(this.rng() * (i + 1));
+      [values[i], values[j]] = [values[j], values[i]];
+    }
+
+    return values;
   }
 }

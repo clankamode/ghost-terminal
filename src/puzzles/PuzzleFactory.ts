@@ -5,44 +5,45 @@ import { MemoryMatrixPuzzle } from './MemoryMatrixPuzzle';
 import { PasswordCrackPuzzle } from './PasswordCrackPuzzle';
 import { PortScanPuzzle } from './PortScanPuzzle';
 import type { BasePuzzle } from './BasePuzzle';
+import { defaultPuzzleRng, type PuzzleRng } from './rng';
 
 export class PuzzleFactory {
-  static createForTarget(target: HackTarget): BasePuzzle {
+  static createForTarget(target: HackTarget, rng: PuzzleRng = defaultPuzzleRng): BasePuzzle {
     const difficulty = Math.max(1, target.difficulty);
-    const selectedType = this.pickPuzzleType(target.puzzleTypes);
+    const selectedType = this.pickPuzzleType(target.puzzleTypes, rng);
 
     if (this.isPasswordPuzzle(selectedType)) {
-      return new PasswordCrackPuzzle(difficulty);
+      return new PasswordCrackPuzzle(difficulty, rng);
     }
 
     if (this.isPortPuzzle(selectedType)) {
-      return new PortScanPuzzle(difficulty);
+      return new PortScanPuzzle(difficulty, rng);
     }
 
     if (this.isCipherPuzzle(selectedType)) {
-      return new CipherPuzzle(difficulty);
+      return new CipherPuzzle(difficulty, rng);
     }
 
     if (this.isMemoryPuzzle(selectedType)) {
-      return new MemoryMatrixPuzzle(difficulty);
+      return new MemoryMatrixPuzzle(difficulty, rng);
     }
 
     if (this.isLogicPuzzle(selectedType)) {
-      return new LogicGatePuzzle(difficulty);
+      return new LogicGatePuzzle(difficulty, rng);
     }
 
     const fallbacks = [LogicGatePuzzle, CipherPuzzle, PortScanPuzzle, MemoryMatrixPuzzle, PasswordCrackPuzzle];
-    const index = Math.floor(Math.random() * fallbacks.length);
+    const index = Math.floor(rng() * fallbacks.length);
     const PuzzleType = fallbacks[index] ?? LogicGatePuzzle;
-    return new PuzzleType(difficulty);
+    return new PuzzleType(difficulty, rng);
   }
 
-  private static pickPuzzleType(puzzleTypes: string[]): string {
+  private static pickPuzzleType(puzzleTypes: string[], rng: PuzzleRng): string {
     if (puzzleTypes.length === 0) {
       return 'logic-gate';
     }
 
-    const index = Math.floor(Math.random() * puzzleTypes.length);
+    const index = Math.floor(rng() * puzzleTypes.length);
     return puzzleTypes[index] ?? 'logic-gate';
   }
 
