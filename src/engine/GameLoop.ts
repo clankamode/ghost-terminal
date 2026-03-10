@@ -1,6 +1,10 @@
 type UpdateCallback = (dt: number) => void;
 type RenderCallback = () => void;
 
+const TARGET_FRAME_DT_SECONDS = 1 / 60;
+const MAX_FRAME_DT_SECONDS = 1 / 15;
+const SUSPENSION_THRESHOLD_MS = 1000;
+
 export class GameLoop {
   private rafId: number | null = null;
   private lastTime = 0;
@@ -54,7 +58,7 @@ export class GameLoop {
       return;
     }
 
-    const dt = (now - this.lastTime) / 1000;
+    const dt = this.normalizeDeltaTime(now - this.lastTime);
     this.lastTime = now;
 
     if (!this.paused) {
@@ -64,4 +68,16 @@ export class GameLoop {
 
     this.rafId = requestAnimationFrame(this.tick);
   };
+
+  private normalizeDeltaTime(elapsedMs: number): number {
+    if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) {
+      return 0;
+    }
+
+    if (elapsedMs >= SUSPENSION_THRESHOLD_MS) {
+      return TARGET_FRAME_DT_SECONDS;
+    }
+
+    return Math.min(elapsedMs / 1000, MAX_FRAME_DT_SECONDS);
+  }
 }

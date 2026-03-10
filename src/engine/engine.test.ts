@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { EventBus } from './EventBus';
+import { GameLoop } from './GameLoop';
 import { GameStore } from './GameState';
 import { LevelGenerator } from './LevelGenerator';
 
@@ -141,5 +142,100 @@ describe('LevelGenerator', () => {
       expect(target.defenses.length).toBeLessThanOrEqual(2);
       expect(target.reward).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('GameLoop', () => {
+  let now = 0;
+  let nextRafId = 0;
+  let scheduledFrames = new Map<number, FrameRequestCallback>();
+
+  const runFrame = (id: number, timestamp: number): void => {
+    const callback = scheduledFrames.get(id);
+    expect(callback).toBeTypeOf('function');
+    scheduledFrames.delete(id);
+    callback?.(timestamp);
+  };
+
+  beforeEach(() => {
+    now = 1000;
+    nextRafId = 0;
+    scheduledFrames = new Map<number, FrameRequestCallback>();
+
+    vi.stubGlobal('performance', {
+      now: vi.fn(() => now),
+    });
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((callback: FrameRequestCallback) => {
+        const id = ++nextRafId;
+        scheduledFrames.set(id, callback);
+        return id;
+      }),
+    );
+    vi.stubGlobal(
+      'cancelAnimationFrame',
+      vi.fn((id: number) => {
+        scheduledFrames.delete(id);
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('preserves normal frame deltas', () => {
+    const update = vi.fn();
+    const render = vi.fn();
+    const loop = new GameLoop(update, render);
+
+    loop.start();
+    runFrame(1, 1016);
+    runFrame(2, 1034);
+
+    expect(update).toHaveBeenNthCalledWith(1, 0.016);
+    expect(update).toHaveBeenNthCalledWith(2, 0.018);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it('normalizes suspension-size frame gaps to a single nominal frame', () => {
+    const update = vi.fn();
+    const render = vi.fn();
+    const loop = new GameLoop(update, render);
+
+    loop.start();
+    runFrame(1, 1016);
+    runFrame(2, 7016);
+
+    expect(update).toHaveBeenNthCalledWith(1, 0.016);
+    expect(update).toHaveBeenNthCalledWith(2, 1 / 60);
+    expect(render).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the core frame scheduling behavior intact', () => {
+    const update = vi.fn();
+    const render = vi.fn();
+    const loop = new GameLoop(update, render);
+
+    loop.start();
+
+    expect(loop.isRunning()).toBe(true);
+    expect(loop.isPaused()).toBe(false);
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(1);
+
+    runFrame(1, 1016);
+
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(requestAnimationFrame).toHaveBeenCalledTimes(2);
+    expect(scheduledFrames.has(2)).toBe(true);
+
+    loop.stop();
+
+    expect(loop.isRunning()).toBe(false);
+    expect(loop.isPaused()).toBe(false);
+    expect(cancelAnimationFrame).toHaveBeenCalledWith(2);
+    expect(scheduledFrames.size).toBe(0);
   });
 });
