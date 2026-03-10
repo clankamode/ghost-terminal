@@ -11,7 +11,7 @@
 ## 🟡 Medium Priority
 - [x] Add lifecycle cleanup hooks for puzzle instances (for example `MemoryMatrixPuzzle` timers) to prevent dangling timers/event emissions after puzzle exit. (completed 2026-03-09: added `BasePuzzle` disposal guard + `MemoryMatrixPuzzle` timer cleanup, with `src/puzzles/puzzle-cleanup.test.ts` proving no post-exit emissions)
 - [x] Clamp/normalize `GameLoop` `dt` after tab suspension to avoid large simulation jumps on resume. (completed 2026-03-10: normalized 1s+ resume gaps to a nominal frame, capped non-suspension spikes, and added `GameLoop` regression tests)
-- [ ] Revisit save/load scope in `GameStore` (currently persists only level/score/lives/streak) and decide whether `systemsBreached`/`timeRemaining` should persist.
+- [x] Revisit save/load scope in `GameStore` (currently persists only level/score/lives/streak) and decide whether `systemsBreached`/`timeRemaining` should persist. (completed 2026-03-10: expanded persisted payload to include `systemsBreached`/`timeRemaining`, added load sanitization/defaults, and covered legacy payload compatibility in engine tests)
 - [ ] Document puzzle input formats and hint mechanics in README or an in-game help command.
 
 ## 🟢 Low Priority / Nice to Have
