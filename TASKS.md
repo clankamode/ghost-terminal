@@ -9,7 +9,7 @@
 - [x] Define consistent failure/attempt behavior for `PortScanPuzzle` wrong answers (numeric misses currently never hard-fail), and keep this consistent with other puzzle penalties. (completed 2026-03-08: added 3-attempt numeric lockout with failure event/feedback parity and tests for invalid input, miss countdown, and hard-fail lockout behavior)
 
 ## 🟡 Medium Priority
-- [ ] Add lifecycle cleanup hooks for puzzle instances (for example `MemoryMatrixPuzzle` timers) to prevent dangling timers/event emissions after puzzle exit.
+- [x] Add lifecycle cleanup hooks for puzzle instances (for example `MemoryMatrixPuzzle` timers) to prevent dangling timers/event emissions after puzzle exit. (completed 2026-03-09: added `BasePuzzle` disposal guard + `MemoryMatrixPuzzle` timer cleanup, with `src/puzzles/puzzle-cleanup.test.ts` proving no post-exit emissions)
 - [ ] Clamp/normalize `GameLoop` `dt` after tab suspension to avoid large simulation jumps on resume.
 - [ ] Revisit save/load scope in `GameStore` (currently persists only level/score/lives/streak) and decide whether `systemsBreached`/`timeRemaining` should persist.
 - [ ] Document puzzle input formats and hint mechanics in README or an in-game help command.
