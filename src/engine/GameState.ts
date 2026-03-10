@@ -28,6 +28,10 @@ interface SavePayload {
   score: number;
   lives: number;
   streak: number;
+  // These fields are optional in persisted payloads for backward compatibility with
+  // older saves that only tracked level/score/lives/streak.
+  systemsBreached?: number;
+  timeRemaining?: number;
 }
 
 export class GameStore extends EventTarget {
@@ -96,6 +100,14 @@ export class GameStore extends EventTarget {
         lives: Math.max(1, Math.floor(parsed.lives)),
         streak:
           typeof parsed.streak === "number" ? Math.max(0, Math.floor(parsed.streak)) : 0,
+        systemsBreached:
+          typeof parsed.systemsBreached === "number"
+            ? Math.max(0, Math.floor(parsed.systemsBreached))
+            : DEFAULT_STATE.systemsBreached,
+        timeRemaining:
+          typeof parsed.timeRemaining === "number"
+            ? Math.max(0, Math.floor(parsed.timeRemaining))
+            : DEFAULT_STATE.timeRemaining,
       };
     } catch {
       return null;
@@ -143,6 +155,8 @@ export class GameStore extends EventTarget {
       score: this.state.score,
       lives: this.state.lives,
       streak: this.state.streak,
+      systemsBreached: this.state.systemsBreached,
+      timeRemaining: this.state.timeRemaining,
     };
 
     try {

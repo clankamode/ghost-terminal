@@ -84,7 +84,15 @@ describe('GameStore', () => {
   });
 
   it('persists save data and clears it on gameover transition', () => {
-    const store = new GameStore({ phase: 'running', currentLevel: 3, score: 420, lives: 2, streak: 4 });
+    const store = new GameStore({
+      phase: 'running',
+      currentLevel: 3,
+      score: 420,
+      lives: 2,
+      streak: 4,
+      systemsBreached: 2,
+      timeRemaining: 187,
+    });
 
     store.patchState({ score: 421 });
 
@@ -95,6 +103,8 @@ describe('GameStore', () => {
       score: 421,
       lives: 2,
       streak: 4,
+      systemsBreached: 2,
+      timeRemaining: 187,
     });
 
     store.patchState({ phase: 'gameover' });
@@ -111,6 +121,8 @@ describe('GameStore', () => {
         score: -100,
         lives: 0,
         streak: -5,
+        systemsBreached: -3,
+        timeRemaining: -20,
       }),
     );
 
@@ -121,6 +133,31 @@ describe('GameStore', () => {
       score: 0,
       lives: 1,
       streak: 0,
+      systemsBreached: 0,
+      timeRemaining: 0,
+    });
+  });
+
+  it('loads legacy save payloads that omit systemsBreached/timeRemaining', () => {
+    storage.set(
+      'ghost-terminal:save',
+      JSON.stringify({
+        currentLevel: 2,
+        score: 77,
+        lives: 3,
+        streak: 1,
+      }),
+    );
+
+    const store = new GameStore();
+
+    expect(store.loadSavedGame()).toEqual({
+      currentLevel: 2,
+      score: 77,
+      lives: 3,
+      streak: 1,
+      systemsBreached: 0,
+      timeRemaining: 300,
     });
   });
 });
