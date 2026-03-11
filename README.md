@@ -9,6 +9,62 @@ A browser-based terminal hacking roguelike. Procedurally generated networks, puz
 - Supabase (leaderboards)
 - Cloudflare Pages
 
+## Engine + puzzle architecture
+
+### Runtime flow
+- `src/app/cyber-app.ts` is the orchestration layer: boot flow, HUD, node selection, puzzle lifecycle, and terminal I/O.
+- `GameStore` (`src/engine/GameState.ts`) is the canonical run state (level, score, lives, streak, timer, breach count) and local save persistence.
+- `LevelGenerator` (`src/engine/LevelGenerator.ts`) emits deterministic level targets when seeded, which keeps balancing and replay work testable.
+- `EventBus` (`src/engine/EventBus.ts`) is the internal gameplay event channel (`PUZZLE_SOLVED`, `PUZZLE_FAILED`, `SCORE_UPDATE`, etc.).
+  - Debug playtest mode is opt-in via `new EventBus({ debugEventLog: true })`.
+  - Use `getEventLog()` to inspect recent emitted events (with timestamps/listener count), `clearEventLog()` to reset, and `setDebugEventLogEnabled()` to toggle mid-run.
+
+### Puzzle model
+- Every puzzle extends `BasePuzzle` (`src/puzzles/BasePuzzle.ts`) and emits DOM events for solved/failed/terminal feedback.
+- `PuzzleFactory` routes generated target metadata into concrete puzzle classes.
+- Randomized puzzles consume injectable RNG (`src/puzzles/rng.ts`) so tests can run deterministically.
+- Puzzles should self-manage cleanup/disposal (especially timers) to avoid post-exit emissions.
+
+## Deployment expectations (Vite + Pages + Supabase)
+
+### 1) Build and static output
+- Vite build output is `dist/`.
+- Cloudflare Pages serves `dist/` as static assets.
+- Required commands:
+
+```bash
+npm install
+npm run build
+```
+
+### 2) Cloudflare Pages deployment
+- Project uses Wrangler Pages deploy:
+
+```bash
+npm run pages:deploy
+# equivalent to: wrangler pages deploy dist
+```
+
+- `wrangler.toml` should point at the Pages project used for this repo.
+- Treat Pages deployment as immutable static publish from the current build output.
+
+### 3) Supabase integration expectations
+- Leaderboard writes/reads depend on Supabase browser env vars configured at build/runtime:
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+- Keep `.env.example` aligned with required variables.
+- Without valid Supabase env vars, local gameplay should still run, but leaderboard operations will fail gracefully.
+
+### 4) PR/release hygiene
+- Before pushing deployment-related changes, run:
+
+```bash
+npm run test
+npm run build
+```
+
+- If puzzle or engine behavior changes, add/update Vitest coverage in `src/engine/*.test.ts` and `src/puzzles/*.test.ts`.
+
 ## Puzzle input quick reference
 During an active puzzle, submit answers directly in the terminal. Type `hint` at any time to request the puzzle's next hint.
 
