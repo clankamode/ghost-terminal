@@ -34,6 +34,61 @@ describe('EventBus', () => {
 
     expect(solvedHandler).toHaveBeenCalledTimes(1);
   });
+
+  it('captures debug event logs when enabled and trims to max entries', () => {
+    const logger = vi.fn();
+    const bus = new EventBus({
+      debugEventLog: true,
+      maxLogEntries: 2,
+      now: vi
+        .fn<() => number>()
+        .mockReturnValueOnce(101)
+        .mockReturnValueOnce(102)
+        .mockReturnValueOnce(103),
+      logger,
+    });
+
+    bus.emit('SCORE_UPDATE', { score: 10, delta: 10 });
+    bus.emit('SCORE_UPDATE', { score: 20, delta: 10 });
+    bus.emit('SCORE_UPDATE', { score: 30, delta: 10 });
+
+    expect(bus.getEventLog()).toEqual([
+      {
+        event: 'SCORE_UPDATE',
+        payload: { score: 20, delta: 10 },
+        timestamp: 102,
+        listeners: 0,
+      },
+      {
+        event: 'SCORE_UPDATE',
+        payload: { score: 30, delta: 10 },
+        timestamp: 103,
+        listeners: 0,
+      },
+    ]);
+    expect(logger).toHaveBeenCalledTimes(3);
+
+    bus.clearEventLog();
+    expect(bus.getEventLog()).toEqual([]);
+  });
+
+  it('supports toggling debug event logs on and off at runtime', () => {
+    const bus = new EventBus();
+
+    bus.emit('GAME_START', { level: 1 });
+    expect(bus.getEventLog()).toEqual([]);
+
+    bus.setDebugEventLogEnabled(true);
+    bus.emit('GAME_START', { level: 2 });
+
+    expect(bus.isDebugEventLogEnabled()).toBe(true);
+    expect(bus.getEventLog()).toHaveLength(1);
+
+    bus.setDebugEventLogEnabled(false);
+    bus.emit('GAME_START', { level: 3 });
+
+    expect(bus.getEventLog()).toHaveLength(1);
+  });
 });
 
 describe('GameStore', () => {

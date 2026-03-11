@@ -16,8 +16,8 @@
 
 ## 🟢 Low Priority / Nice to Have
 - [ ] Show run seed in UI/log output and support replaying with a seed for debugging and speedrun consistency.
-- [ ] Add a debug event-log mode for `EventBus` to aid balancing and telemetry during playtests.
-- [ ] Expand README with engine/puzzle architecture notes and deployment expectations (Vite + Pages + Supabase).
+- [x] Add a debug event-log mode for `EventBus` to aid balancing and telemetry during playtests. (completed 2026-03-11: added opt-in `EventBus` debug logging with bounded in-memory log, runtime toggle, timestamp/listener metadata, and coverage in `src/engine/engine.test.ts`)
+- [x] Expand README with engine/puzzle architecture notes and deployment expectations (Vite + Pages + Supabase). (completed 2026-03-11: documented runtime architecture, puzzle model, EventBus debug log usage, and Pages/Supabase deployment expectations)
 
 ## 🧠 Notes
 - `src/main.ts` is currently just bootstrap wiring; most risk is concentrated in engine/puzzle logic.
