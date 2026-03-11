@@ -1,6 +1,16 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, state } from 'lit/decorators.js';
-import { EventBus, GameStore, LevelGenerator, type GameState, type HackTarget } from '../engine';
+import {
+  EventBus,
+  GameStore,
+  LevelGenerator,
+  mulberry32,
+  parseReplayCommand,
+  parseSeedInput,
+  createRunSeed,
+  type GameState,
+  type HackTarget,
+} from '../engine';
 import { PuzzleFactory } from '../puzzles/PuzzleFactory';
 import type { BasePuzzle, PuzzleFailedDetail, PuzzleSolvedDetail } from '../puzzles/BasePuzzle';
 import { addScore } from '../lib/leaderboard';
@@ -38,7 +48,8 @@ export class CyberApp extends LitElement {
 
   private readonly store = new GameStore();
   private readonly eventBus = new EventBus();
-  private readonly levelGenerator = new LevelGenerator();
+  private levelGenerator = new LevelGenerator();
+  private puzzleRng: () => number = Math.random;
 
   private readonly targets = new Map<string, HackTarget>();
   private unsubscribers: Array<() => void> = [];
@@ -183,6 +194,7 @@ export class CyberApp extends LitElement {
             <boot-screen
               .hasContinue=${this.hasSavedRun}
               @start-new-game=${this.onStartNewGame}
+              @start-seeded-game=${this.onStartSeededGame}
               @continue-game=${this.onContinueGame}
             ></boot-screen>
             <leaderboard-panel></leaderboard-panel>
@@ -202,6 +214,7 @@ export class CyberApp extends LitElement {
             .lives=${this.gameState.lives}
             .time=${this.elapsedSeconds}
             .streak=${this.gameState.streak}
+            .seed=${this.gameState.runSeed}
             .tracePercent=${this.tracePercent}
           ></status-bar>
           <button
@@ -275,16 +288,20 @@ export class CyberApp extends LitElement {
   }
 
   private onStartNewGame = (): void => {
-    soundManager.play('start');
-    this.store.reset({
-      phase: 'running',
-      currentLevel: 1,
-      score: 0,
-      lives: 3,
-      streak: 0,
-    });
-    this.phase = 'game';
-    this.startLevel({ lives: 3, streak: 0 });
+    this.startRunWithSeed(createRunSeed());
+  };
+
+  private onStartSeededGame = (event: Event): void => {
+    const customEvent = event as CustomEvent<{ seed: string }>;
+    const parsedSeed = parseSeedInput(customEvent.detail.seed ?? '');
+
+    if (parsedSeed === null) {
+      const terminal = this.getTerminal();
+      terminal?.printLine('Invalid seed. Use an integer between 0 and 4294967295.', '#ffb366');
+      return;
+    }
+
+    this.startRunWithSeed(parsedSeed);
   };
 
   private onContinueGame = (): void => {
@@ -295,6 +312,9 @@ export class CyberApp extends LitElement {
       return;
     }
 
+    const runSeed = saved.runSeed ?? createRunSeed();
+    this.configureRunRng(runSeed);
+
     this.store.reset({
       phase: 'running',
       currentLevel: saved.currentLevel,
@@ -303,10 +323,31 @@ export class CyberApp extends LitElement {
       streak: saved.streak,
       systemsBreached: 0,
       timeRemaining: 300,
+      runSeed,
     });
     this.phase = 'game';
     this.startLevel({ lives: saved.lives, streak: saved.streak });
   };
+
+  private startRunWithSeed(seed: number): void {
+    soundManager.play('start');
+    this.configureRunRng(seed);
+    this.store.reset({
+      phase: 'running',
+      currentLevel: 1,
+      score: 0,
+      lives: 3,
+      streak: 0,
+      runSeed: seed,
+    });
+    this.phase = 'game';
+    this.startLevel({ lives: 3, streak: 0 });
+  }
+
+  private configureRunRng(seed: number): void {
+    this.levelGenerator = new LevelGenerator(seed);
+    this.puzzleRng = mulberry32(seed ^ 0x9e3779b9);
+  }
 
   private startLevel(options?: { lives?: number; streak?: number }): void {
     this.stopClock();
@@ -344,6 +385,7 @@ export class CyberApp extends LitElement {
       }
       terminal.clear();
       terminal.printLine(`LEVEL ${currentLevel} READY`, '#8cff9e');
+      terminal.printLine(`RUN SEED ${this.gameState.runSeed}`, '#7cc9ff');
       terminal.printLine('Select an ACCESSIBLE node from SYSTEM-MAP.');
       terminal.printLine('Commands during puzzle: `hint` or answer directly.');
     });
@@ -392,7 +434,7 @@ export class CyberApp extends LitElement {
     this.selectedNodeId = node.id;
     this.activeTarget = target;
 
-    const puzzle = PuzzleFactory.createForTarget(target);
+    const puzzle = PuzzleFactory.createForTarget(target, this.puzzleRng);
     this.activePuzzle = puzzle;
 
     const solvedHandler = (puzzleEvent: Event): void => {
@@ -443,19 +485,34 @@ export class CyberApp extends LitElement {
     }
 
     if (this.gameState.phase === 'gameover') {
+      const replaySeed = parseReplayCommand(command);
       if (command.toLowerCase() === 'restart') {
         this.onStartNewGame();
         return;
       }
-      terminal.printLine('Game over. Type `restart` to play again.', '#ff6b6b');
+      if (replaySeed !== null) {
+        this.startRunWithSeed(replaySeed);
+        return;
+      }
+      terminal.printLine('Game over. Type `restart` or `replay <seed>`.', '#ff6b6b');
       return;
     }
 
     if (!this.activePuzzle) {
       if (command.toLowerCase() === 'help') {
         terminal.printLine('Select an ACCESSIBLE node to start a puzzle.');
-      } else if (command.length > 0) {
-        terminal.printLine('No active puzzle. Select a node from SYSTEM-MAP.', '#ffb366');
+      } else if (command.toLowerCase() === 'seed') {
+        terminal.printLine(`RUN SEED ${this.gameState.runSeed}`, '#7cc9ff');
+      } else {
+        const replaySeed = parseReplayCommand(command);
+        if (replaySeed !== null) {
+          this.startRunWithSeed(replaySeed);
+          return;
+        }
+
+        if (command.length > 0) {
+          terminal.printLine('No active puzzle. Select a node from SYSTEM-MAP.', '#ffb366');
+        }
       }
       return;
     }
@@ -562,7 +619,8 @@ export class CyberApp extends LitElement {
     terminal?.printLine('', '#ff6b6b');
     terminal?.printLine(`GAME OVER: ${reason}`, '#ff6b6b');
     terminal?.printLine(`Final score: ${this.gameState.score}`);
-    terminal?.printLine('Type `restart` to start a new run.');
+    terminal?.printLine(`Run seed: ${this.gameState.runSeed}`);
+    terminal?.printLine('Type `restart` for a new seed or `replay <seed>` to replay.');
   }
 
   private onToggleSound = (): void => {

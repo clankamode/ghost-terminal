@@ -26,6 +26,9 @@ export class BootScreen extends LitElement {
   hasContinue = false;
 
   @state()
+  private replaySeed = '';
+
+  @state()
   private displayedLines: string[] = [];
 
   @state()
@@ -67,12 +70,16 @@ export class BootScreen extends LitElement {
       flex-wrap: wrap;
     }
 
-    button {
+    button,
+    input {
       border: 1px solid #2f8a3f;
       background: #031006;
       color: inherit;
       font: inherit;
       padding: 0.4rem 0.65rem;
+    }
+
+    button {
       cursor: pointer;
       text-transform: uppercase;
     }
@@ -111,6 +118,18 @@ export class BootScreen extends LitElement {
               ${this.hasContinue
                 ? html`<button type="button" @click=${this.onContinueGame}>Continue Game</button>`
                 : null}
+              <input
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                .value=${this.replaySeed}
+                @input=${this.onSeedInput}
+                placeholder="Seed"
+                aria-label="Replay seed"
+              />
+              <button type="button" @click=${this.onReplaySeed} ?disabled=${this.replaySeed.trim().length === 0}>
+                Replay Seed
+              </button>
             </div>
           `
         : null}
@@ -174,6 +193,21 @@ export class BootScreen extends LitElement {
   private onContinueGame = (): void => {
     this.dispatchEvent(
       new CustomEvent('continue-game', {
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
+
+  private onSeedInput = (event: Event): void => {
+    const input = event.target as HTMLInputElement;
+    this.replaySeed = input.value.replace(/\D+/g, '');
+  };
+
+  private onReplaySeed = (): void => {
+    this.dispatchEvent(
+      new CustomEvent<{ seed: string }>('start-seeded-game', {
+        detail: { seed: this.replaySeed.trim() },
         bubbles: true,
         composed: true,
       }),

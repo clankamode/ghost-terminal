@@ -8,6 +8,7 @@ export interface GameState {
   systemsBreached: number;
   timeRemaining: number;
   streak: number;
+  runSeed: number;
 }
 
 const CHANGE_EVENT = "change";
@@ -21,6 +22,7 @@ const DEFAULT_STATE: GameState = {
   systemsBreached: 0,
   timeRemaining: 300,
   streak: 0,
+  runSeed: 0,
 };
 
 interface SavePayload {
@@ -32,6 +34,7 @@ interface SavePayload {
   // older saves that only tracked level/score/lives/streak.
   systemsBreached?: number;
   timeRemaining?: number;
+  runSeed?: number;
 }
 
 export class GameStore extends EventTarget {
@@ -108,6 +111,10 @@ export class GameStore extends EventTarget {
           typeof parsed.timeRemaining === "number"
             ? Math.max(0, Math.floor(parsed.timeRemaining))
             : DEFAULT_STATE.timeRemaining,
+        runSeed:
+          typeof parsed.runSeed === 'number' && Number.isFinite(parsed.runSeed)
+            ? parsed.runSeed >>> 0
+            : DEFAULT_STATE.runSeed,
       };
     } catch {
       return null;
@@ -157,6 +164,7 @@ export class GameStore extends EventTarget {
       streak: this.state.streak,
       systemsBreached: this.state.systemsBreached,
       timeRemaining: this.state.timeRemaining,
+      runSeed: this.state.runSeed,
     };
 
     try {

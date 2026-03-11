@@ -4,6 +4,7 @@ import { EventBus } from './EventBus';
 import { GameLoop } from './GameLoop';
 import { GameStore } from './GameState';
 import { LevelGenerator } from './LevelGenerator';
+import { createRunSeed, parseReplayCommand, parseSeedInput } from './runSeed';
 
 describe('EventBus', () => {
   it('registers handlers, emits payloads, and unsubscribes cleanly', () => {
@@ -147,6 +148,7 @@ describe('GameStore', () => {
       streak: 4,
       systemsBreached: 2,
       timeRemaining: 187,
+      runSeed: 12345,
     });
 
     store.patchState({ score: 421 });
@@ -160,6 +162,7 @@ describe('GameStore', () => {
       streak: 4,
       systemsBreached: 2,
       timeRemaining: 187,
+      runSeed: 12345,
     });
 
     store.patchState({ phase: 'gameover' });
@@ -178,6 +181,7 @@ describe('GameStore', () => {
         streak: -5,
         systemsBreached: -3,
         timeRemaining: -20,
+        runSeed: 9_999_999_999,
       }),
     );
 
@@ -190,6 +194,7 @@ describe('GameStore', () => {
       streak: 0,
       systemsBreached: 0,
       timeRemaining: 0,
+      runSeed: 1410065407,
     });
   });
 
@@ -213,7 +218,22 @@ describe('GameStore', () => {
       streak: 1,
       systemsBreached: 0,
       timeRemaining: 300,
+      runSeed: 0,
     });
+  });
+});
+
+describe('runSeed helpers', () => {
+  it('creates a normalized uint32 seed from a time source', () => {
+    expect(createRunSeed(() => 4_294_967_297)).toBe(1);
+  });
+
+  it('parses replay seed commands and rejects invalid input', () => {
+    expect(parseSeedInput('1337')).toBe(1337);
+    expect(parseSeedInput('4294967296')).toBeNull();
+    expect(parseReplayCommand('replay 9876')).toBe(9876);
+    expect(parseReplayCommand('replay nope')).toBeNull();
+    expect(parseReplayCommand('help')).toBeNull();
   });
 });
 
