@@ -4,7 +4,7 @@ export type LeaderboardEntry = {
   date: string;
 };
 
-const LEADERBOARD_KEY = 'cyberlobster_leaderboard';
+const LEADERBOARD_KEY = 'ghost_terminal_leaderboard';
 const MAX_ENTRIES = 10;
 
 export function getLeaderboard(): LeaderboardEntry[] {

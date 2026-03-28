@@ -1,6 +1,6 @@
 type SoundName = 'solve' | 'fail' | 'trace' | 'start';
 
-const SOUND_KEY = 'cyberlobster_sound';
+const SOUND_KEY = 'ghost_terminal_sound';
 
 export class SoundManager {
   enabled = false;
