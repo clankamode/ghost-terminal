@@ -38,9 +38,6 @@ export class CyberApp extends LitElement {
   private tracePercent = 0;
 
   @state()
-  private elapsedSeconds = 0;
-
-  @state()
   private hasSavedRun = false;
 
   @state()
@@ -212,7 +209,7 @@ export class CyberApp extends LitElement {
             .level=${this.gameState.currentLevel}
             .score=${this.gameState.score}
             .lives=${this.gameState.lives}
-            .time=${this.elapsedSeconds}
+            .time=${this.gameState.timeRemaining}
             .streak=${this.gameState.streak}
             .seed=${this.gameState.runSeed}
             .tracePercent=${this.tracePercent}
@@ -368,7 +365,6 @@ export class CyberApp extends LitElement {
 
     this.selectedNodeId = '';
     this.tracePercent = 0;
-    this.elapsedSeconds = 0;
 
     this.store.patchState({
       phase: 'running',
@@ -396,7 +392,6 @@ export class CyberApp extends LitElement {
       }
 
       const nextRemaining = Math.max(0, this.gameState.timeRemaining - 1);
-      this.elapsedSeconds += 1;
       this.store.patchState({ timeRemaining: nextRemaining });
 
       if (nextRemaining === 0) {

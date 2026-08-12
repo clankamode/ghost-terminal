@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import { isTraceTimerCritical } from './statusBarTime';
 
 @customElement('status-bar')
 export class StatusBar extends LitElement {
@@ -47,7 +48,8 @@ export class StatusBar extends LitElement {
       white-space: nowrap;
     }
 
-    .trace-high {
+    .trace-high,
+    .time-critical {
       color: #ff4d4d;
       animation: traceFlash 0.9s steps(1, end) infinite;
       font-weight: bold;
@@ -72,12 +74,13 @@ export class StatusBar extends LitElement {
 
   render() {
     const traceClass = this.tracePercent > 75 ? 'trace-high' : '';
+    const timeClass = isTraceTimerCritical(this.time) ? 'time-critical' : '';
     return html`
       <div class="bar">
         <span class="item">LEVEL ${this.level}</span>
         <span class="item">SCORE ${this.score}</span>
         <span class="item">LIVES ${this.lives}</span>
-        <span class="item">TIME ${this.time}s</span>
+        <span class="item ${timeClass}">TIME LEFT ${this.time}s</span>
         <span class="item">STREAK ${this.streak}</span>
         <span class="item">SEED ${this.seed}</span>
         <span class="item ${traceClass}">TRACE ${this.tracePercent}%</span>
