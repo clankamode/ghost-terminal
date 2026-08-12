@@ -23,6 +23,7 @@ import {
   formatGameOverLines,
   type GameOverSummary,
 } from './gameOverFlow';
+import { resolvePuzzleFail } from './failResolution';
 
 type AppPhase = 'boot' | 'game';
 
@@ -605,21 +606,25 @@ export class CyberApp extends LitElement {
 
   private handlePuzzleFailed(target: HackTarget, detail: PuzzleFailedDetail): void {
     const terminal = this.getTerminal();
-    const penalty = Math.max(25, target.difficulty * 20);
-    const nextScore = Math.max(0, this.gameState.score - penalty);
-    const nextLives = Math.max(0, this.gameState.lives - 1);
+    const { penalty, nextScore, nextLives } = resolvePuzzleFail({
+      score: this.gameState.score,
+      lives: this.gameState.lives,
+      difficulty: target.difficulty,
+    });
 
     this.store.patchState({ streak: 0 });
+
+    // Apply score penalty before PUZZLE_FAILED so a last-life endGame/leaderboard
+    // write sees the penalized score rather than the pre-fail total.
+    this.eventBus.emit('SCORE_UPDATE', {
+      score: nextScore,
+      delta: -penalty,
+    });
 
     this.eventBus.emit('PUZZLE_FAILED', {
       systemId: target.id,
       puzzleType: detail.puzzle,
       penalty,
-    });
-
-    this.eventBus.emit('SCORE_UPDATE', {
-      score: nextScore,
-      delta: -penalty,
     });
 
     terminal?.printLine(
