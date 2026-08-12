@@ -18,6 +18,11 @@ import { soundManager } from '../lib/sound';
 import type { HackingTerminal } from '../components/hacking-terminal';
 import type { SystemNode } from '../components/system-map';
 import { optionsForNextLevel } from './levelProgression';
+import {
+  formatBootGameOverCopy,
+  formatGameOverLines,
+  type GameOverSummary,
+} from './gameOverFlow';
 
 type AppPhase = 'boot' | 'game';
 
@@ -43,6 +48,9 @@ export class CyberApp extends LitElement {
 
   @state()
   private soundEnabled = soundManager.enabled;
+
+  @state()
+  private lastRunSummary: GameOverSummary | null = null;
 
   private readonly store = new GameStore();
   private readonly eventBus = new EventBus();
@@ -122,7 +130,14 @@ export class CyberApp extends LitElement {
       gap: 0.5rem;
     }
 
-    .sound-toggle {
+    .hud-actions {
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .sound-toggle,
+    .menu-button {
       border: 1px solid #2f8a3f;
       background: #031006;
       color: #d7fbd8;
@@ -133,8 +148,16 @@ export class CyberApp extends LitElement {
       cursor: pointer;
     }
 
+    .menu-button {
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
     .sound-toggle:hover,
-    .sound-toggle:focus-visible {
+    .sound-toggle:focus-visible,
+    .menu-button:hover,
+    .menu-button:focus-visible {
       background: #0a2310;
       outline: none;
     }
@@ -183,11 +206,15 @@ export class CyberApp extends LitElement {
 
   render() {
     if (this.phase === 'boot') {
-      const isGameOver = this.gameState.phase === 'gameover';
+      const isGameOver = this.gameState.phase === 'gameover' && this.lastRunSummary !== null;
       return html`
         <div class="boot-wrap">
           <h1 class="boot-title">Ghost Terminal</h1>
-          <p class="boot-copy">${isGameOver ? 'Run terminated. Ready for redeploy.' : 'Initializing intrusion suite...'}</p>
+          <p class="boot-copy">
+            ${isGameOver && this.lastRunSummary
+              ? formatBootGameOverCopy(this.lastRunSummary)
+              : 'Initializing intrusion suite...'}
+          </p>
           <section class="boot-layout">
             <boot-screen
               .hasContinue=${this.hasSavedRun}
@@ -215,15 +242,29 @@ export class CyberApp extends LitElement {
             .seed=${this.gameState.runSeed}
             .tracePercent=${this.tracePercent}
           ></status-bar>
-          <button
-            class="sound-toggle"
-            type="button"
-            @click=${this.onToggleSound}
-            aria-label=${this.soundEnabled ? 'Disable sound' : 'Enable sound'}
-            title=${this.soundEnabled ? 'Disable sound' : 'Enable sound'}
-          >
-            ${this.soundEnabled ? '🔊' : '🔇'}
-          </button>
+          <div class="hud-actions">
+            ${gameOver
+              ? html`
+                  <button
+                    class="menu-button"
+                    type="button"
+                    @click=${this.onReturnToMenu}
+                    aria-label="Return to boot menu"
+                  >
+                    Menu
+                  </button>
+                `
+              : null}
+            <button
+              class="sound-toggle"
+              type="button"
+              @click=${this.onToggleSound}
+              aria-label=${this.soundEnabled ? 'Disable sound' : 'Enable sound'}
+              title=${this.soundEnabled ? 'Disable sound' : 'Enable sound'}
+            >
+              ${this.soundEnabled ? '🔊' : '🔇'}
+            </button>
+          </div>
         </section>
 
         <section class="layout">
@@ -233,10 +274,7 @@ export class CyberApp extends LitElement {
             @node-selected=${this.onNodeSelected}
           ></system-map>
 
-          <hacking-terminal
-            .disabled=${gameOver}
-            @terminal-command=${this.onTerminalCommand}
-          ></hacking-terminal>
+          <hacking-terminal @terminal-command=${this.onTerminalCommand}></hacking-terminal>
         </section>
       </main>
     `;
@@ -312,6 +350,7 @@ export class CyberApp extends LitElement {
 
     const runSeed = saved.runSeed ?? createRunSeed();
     this.configureRunRng(runSeed);
+    this.lastRunSummary = null;
 
     this.store.reset({
       phase: 'running',
@@ -330,6 +369,7 @@ export class CyberApp extends LitElement {
   private startRunWithSeed(seed: number): void {
     soundManager.play('start');
     this.configureRunRng(seed);
+    this.lastRunSummary = null;
     this.store.reset({
       phase: 'running',
       currentLevel: 1,
@@ -487,11 +527,15 @@ export class CyberApp extends LitElement {
         this.onStartNewGame();
         return;
       }
+      if (command.toLowerCase() === 'menu') {
+        this.onReturnToMenu();
+        return;
+      }
       if (replaySeed !== null) {
         this.startRunWithSeed(replaySeed);
         return;
       }
-      terminal.printLine('Game over. Type `restart` or `replay <seed>`.', '#ff6b6b');
+      terminal.printLine('Game over. Type `restart`, `replay <seed>`, or `menu`.', '#ff6b6b');
       return;
     }
 
@@ -604,21 +648,31 @@ export class CyberApp extends LitElement {
       return;
     }
 
-    addScore(this.gameState.score, this.gameState.currentLevel);
+    const summary: GameOverSummary = {
+      reason,
+      score: this.gameState.score,
+      seed: this.gameState.runSeed,
+    };
+
+    addScore(summary.score, this.gameState.currentLevel);
     this.store.patchState({ phase: 'gameover' });
     this.store.clearSavedGame();
     this.stopClock();
     this.teardownPuzzle();
     this.hasSavedRun = false;
-    this.phase = 'boot';
+    this.lastRunSummary = summary;
+    // Keep the game shell mounted so terminal results + restart/replay remain usable.
 
     const terminal = this.getTerminal();
     terminal?.printLine('', '#ff6b6b');
-    terminal?.printLine(`GAME OVER: ${reason}`, '#ff6b6b');
-    terminal?.printLine(`Final score: ${this.gameState.score}`);
-    terminal?.printLine(`Run seed: ${this.gameState.runSeed}`);
-    terminal?.printLine('Type `restart` for a new seed or `replay <seed>` to replay.');
+    for (const line of formatGameOverLines(summary)) {
+      terminal?.printLine(line, line.startsWith('GAME OVER') ? '#ff6b6b' : undefined);
+    }
   }
+
+  private onReturnToMenu = (): void => {
+    this.phase = 'boot';
+  };
 
   private onToggleSound = (): void => {
     soundManager.toggle();
