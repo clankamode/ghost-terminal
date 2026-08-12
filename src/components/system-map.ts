@@ -1,7 +1,12 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property } from 'lit/decorators.js';
+import {
+  isSystemNodeDisabled,
+  systemNodeAriaLabel,
+  type SystemNodeState,
+} from './systemMapA11y';
 
-export type SystemState = 'locked' | 'accessible' | 'breached' | 'defended';
+export type SystemState = SystemNodeState
 
 export interface SystemNode {
   id: string;
@@ -169,10 +174,14 @@ export class SystemMap extends LitElement {
 
   private renderNodeByValue(node: SystemNode) {
     const isSelected = this.selectedNodeId === node.id;
+    const disabled = isSystemNodeDisabled(node.state);
     return html`<span
       role="button"
       tabindex="0"
       class="node ${node.state} ${isSelected ? 'selected' : ''}"
+      aria-label=${systemNodeAriaLabel(node.label, node.state, isSelected)}
+      aria-disabled=${disabled ? 'true' : 'false'}
+      aria-pressed=${isSelected ? 'true' : 'false'}
       @click=${() => this.selectNode(node)}
       @keydown=${(event: KeyboardEvent) => this.onNodeKeyDown(event, node)}
       >[${node.label}]</span

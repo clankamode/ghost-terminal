@@ -76,7 +76,7 @@ export class StatusBar extends LitElement {
     const traceClass = this.tracePercent > 75 ? 'trace-high' : '';
     const timeClass = isTraceTimerCritical(this.time) ? 'time-critical' : '';
     return html`
-      <div class="bar">
+      <div class="bar" role="status" aria-live="polite" aria-atomic="true" aria-label="Run status">
         <span class="item">LEVEL ${this.level}</span>
         <span class="item">SCORE ${this.score}</span>
         <span class="item">LIVES ${this.lives}</span>

@@ -79,6 +79,7 @@ export class HackingTerminal extends LitElement {
     .prompt {
       color: #7cff93;
       user-select: none;
+      margin: 0;
     }
 
     input {
@@ -137,7 +138,13 @@ export class HackingTerminal extends LitElement {
   render() {
     return html`
       <div class="terminal" @click=${this.focus}>
-        <div class="history">
+        <div
+          class="history"
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="Terminal output"
+        >
           ${this.history.map(
             (line) =>
               html`<div class="line" style=${line.color ? `color:${line.color}` : ''}>
@@ -146,11 +153,12 @@ export class HackingTerminal extends LitElement {
           )}
         </div>
         <div class="input-row">
-          <span class="prompt">${this.prompt}</span>
+          <label class="prompt" for="commandInput">${this.prompt}</label>
           <input
             id="commandInput"
             .value=${this.command}
             ?disabled=${this.disabled}
+            aria-label="Terminal command"
             autocomplete="off"
             autocapitalize="off"
             spellcheck="false"
