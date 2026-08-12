@@ -17,6 +17,7 @@ import { addScore } from '../lib/leaderboard';
 import { soundManager } from '../lib/sound';
 import type { HackingTerminal } from '../components/hacking-terminal';
 import type { SystemNode } from '../components/system-map';
+import { optionsForNextLevel } from './levelProgression';
 
 type AppPhase = 'boot' | 'game';
 
@@ -374,7 +375,8 @@ export class CyberApp extends LitElement {
       phase: 'running',
       timeRemaining: 300,
       systemsBreached: 0,
-      lives: options?.lives ?? 3,
+      // Default to current run lives (not a refill) so level advances keep pressure.
+      lives: options?.lives ?? this.gameState.lives,
       streak: options?.streak ?? this.gameState.streak,
     });
 
@@ -599,7 +601,7 @@ export class CyberApp extends LitElement {
     terminal?.printLine(`Advancing to LEVEL ${nextLevel}...`, '#8cff9e');
 
     this.store.patchState({ currentLevel: nextLevel });
-    this.startLevel();
+    this.startLevel(optionsForNextLevel(this.gameState));
   }
 
   private endGame(reason: string): void {
