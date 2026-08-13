@@ -55,11 +55,14 @@ describe('Puzzle flows', () => {
       failedEvents.push((event as CustomEvent<{ reason?: string }>).detail);
     });
 
+    expect(puzzle.solve('12')).toBe(false);
+    expect(feedback.at(-1)).toBe('PIN must be exactly 4 digits. Guess not consumed.');
+
     for (let i = 0; i < 8; i += 1) {
       expect(puzzle.solve('9999')).toBe(false);
     }
 
-    expect(feedback.length).toBe(8);
+    expect(feedback.filter((line) => line.includes('→')).length).toBe(8);
     expect(failedEvents).toHaveLength(1);
     expect(failedEvents[0]?.reason).toContain('Out of guesses. PIN was 1234.');
   });

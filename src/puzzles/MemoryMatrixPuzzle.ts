@@ -73,6 +73,11 @@ export class MemoryMatrixPuzzle extends BasePuzzle {
 
     const guess = this.parseGuess(this.normalizeInput(input));
     if (!guess) {
+      this.dispatchEvent(
+        new CustomEvent<string>('terminal-feedback', {
+          detail: 'Malformed or duplicate entries. Use A1=@, B3=# (attempt not consumed).',
+        }),
+      );
       return false;
     }
 

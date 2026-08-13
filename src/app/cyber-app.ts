@@ -24,6 +24,8 @@ import {
   type GameOverSummary,
 } from './gameOverFlow';
 import { resolvePuzzleFail } from './failResolution';
+import { formatTerminalHelp } from './terminalHelp';
+import { formatContinueRunNotice } from './continueRunCopy';
 
 type AppPhase = 'boot' | 'game';
 
@@ -52,6 +54,9 @@ export class CyberApp extends LitElement {
 
   @state()
   private lastRunSummary: GameOverSummary | null = null;
+
+  @state()
+  private bootNotice: string | null = null;
 
   private readonly store = new GameStore();
   private readonly eventBus = new EventBus();
@@ -212,9 +217,11 @@ export class CyberApp extends LitElement {
         <div class="boot-wrap">
           <h1 class="boot-title">Ghost Terminal</h1>
           <p class="boot-copy">
-            ${isGameOver && this.lastRunSummary
-              ? formatBootGameOverCopy(this.lastRunSummary)
-              : 'Initializing intrusion suite...'}
+            ${this.bootNotice
+              ? this.bootNotice
+              : isGameOver && this.lastRunSummary
+                ? formatBootGameOverCopy(this.lastRunSummary)
+                : 'Initializing intrusion suite... Local leaderboard scores stay in this browser only.'}
           </p>
           <section class="boot-layout">
             <boot-screen
@@ -314,17 +321,20 @@ export class CyberApp extends LitElement {
         this.tracePercent = nextTrace;
         soundManager.play('fail');
         this.store.patchState({ lives: nextLives });
-        if (nextTrace >= 100) {
-          this.store.patchState({ streak: 0 });
-        }
         if (nextLives === 0) {
           this.endGame('All agent lives depleted.');
+          return;
+        }
+        if (nextTrace >= 100) {
+          this.store.patchState({ streak: 0 });
+          this.endGame('Trace meter reached 100%.');
         }
       }),
     );
   }
 
   private onStartNewGame = (): void => {
+    this.bootNotice = null;
     this.startRunWithSeed(createRunSeed());
   };
 
@@ -333,11 +343,12 @@ export class CyberApp extends LitElement {
     const parsedSeed = parseSeedInput(customEvent.detail.seed ?? '');
 
     if (parsedSeed === null) {
-      const terminal = this.getTerminal();
-      terminal?.printLine('Invalid seed. Use an integer between 0 and 4294967295.', '#ffb366');
+      // Boot screen has no terminal; surface the error in boot copy instead of a silent no-op.
+      this.bootNotice = 'Invalid seed. Use an integer between 0 and 4294967295.';
       return;
     }
 
+    this.bootNotice = null;
     this.startRunWithSeed(parsedSeed);
   };
 
@@ -345,32 +356,42 @@ export class CyberApp extends LitElement {
     soundManager.play('start');
     const saved = this.store.loadSavedGame();
     if (!saved) {
-      this.onStartNewGame();
+      // Continue was offered but storage disappeared; start fresh without pretending we resumed.
+      this.bootNotice = null;
+      this.startRunWithSeed(createRunSeed());
       return;
     }
 
     const runSeed = saved.runSeed ?? createRunSeed();
     this.configureRunRng(runSeed);
     this.lastRunSummary = null;
+    this.bootNotice = null;
 
+    // Continue restores run stats only. startLevel regenerates the map from seed and
+    // resets timer/breaches — mid-level node progress is intentionally not resumed.
     this.store.reset({
       phase: 'running',
-      currentLevel: saved.currentLevel,
-      score: saved.score,
-      lives: saved.lives,
-      streak: saved.streak,
+      currentLevel: saved.currentLevel ?? 1,
+      score: saved.score ?? 0,
+      lives: saved.lives ?? 3,
+      streak: saved.streak ?? 0,
       systemsBreached: 0,
       timeRemaining: 300,
       runSeed,
     });
     this.phase = 'game';
-    this.startLevel({ lives: saved.lives, streak: saved.streak });
+    this.startLevel({
+      lives: saved.lives ?? 3,
+      streak: saved.streak ?? 0,
+      continueNotice: true,
+    });
   };
 
   private startRunWithSeed(seed: number): void {
     soundManager.play('start');
     this.configureRunRng(seed);
     this.lastRunSummary = null;
+    this.bootNotice = null;
     this.store.reset({
       phase: 'running',
       currentLevel: 1,
@@ -388,7 +409,11 @@ export class CyberApp extends LitElement {
     this.puzzleRng = mulberry32(seed ^ 0x9e3779b9);
   }
 
-  private startLevel(options?: { lives?: number; streak?: number }): void {
+  private startLevel(options?: {
+    lives?: number;
+    streak?: number;
+    continueNotice?: boolean;
+  }): void {
     this.stopClock();
     this.teardownPuzzle();
 
@@ -423,10 +448,15 @@ export class CyberApp extends LitElement {
         return;
       }
       terminal.clear();
+      if (options?.continueNotice) {
+        for (const line of formatContinueRunNotice(currentLevel)) {
+          terminal.printLine(line, '#ffb366');
+        }
+      }
       terminal.printLine(`LEVEL ${currentLevel} READY`, '#8cff9e');
       terminal.printLine(`RUN SEED ${this.gameState.runSeed}`, '#7cc9ff');
       terminal.printLine('Select an ACCESSIBLE node from SYSTEM-MAP.');
-      terminal.printLine('Commands during puzzle: `hint` or answer directly.');
+      terminal.printLine('Type `help` for commands. During a puzzle: `hint` or answer directly.');
     });
 
     this.timerId = window.setInterval(() => {
@@ -524,6 +554,12 @@ export class CyberApp extends LitElement {
 
     if (this.gameState.phase === 'gameover') {
       const replaySeed = parseReplayCommand(command);
+      if (command.toLowerCase() === 'help') {
+        for (const line of formatTerminalHelp('gameover')) {
+          terminal.printLine(line, '#ff6b6b');
+        }
+        return;
+      }
       if (command.toLowerCase() === 'restart') {
         this.onStartNewGame();
         return;
@@ -536,13 +572,17 @@ export class CyberApp extends LitElement {
         this.startRunWithSeed(replaySeed);
         return;
       }
-      terminal.printLine('Game over. Type `restart`, `replay <seed>`, or `menu`.', '#ff6b6b');
+      for (const line of formatTerminalHelp('gameover')) {
+        terminal.printLine(line, '#ff6b6b');
+      }
       return;
     }
 
     if (!this.activePuzzle) {
       if (command.toLowerCase() === 'help') {
-        terminal.printLine('Select an ACCESSIBLE node to start a puzzle.');
+        for (const line of formatTerminalHelp('idle')) {
+          terminal.printLine(line);
+        }
       } else if (command.toLowerCase() === 'seed') {
         terminal.printLine(`RUN SEED ${this.gameState.runSeed}`, '#7cc9ff');
       } else {
@@ -553,8 +593,15 @@ export class CyberApp extends LitElement {
         }
 
         if (command.length > 0) {
-          terminal.printLine('No active puzzle. Select a node from SYSTEM-MAP.', '#ffb366');
+          terminal.printLine('No active puzzle. Select a node from SYSTEM-MAP. Type `help` for commands.', '#ffb366');
         }
+      }
+      return;
+    }
+
+    if (command.toLowerCase() === 'help') {
+      for (const line of formatTerminalHelp('puzzle')) {
+        terminal.printLine(line);
       }
       return;
     }

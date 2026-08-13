@@ -6,8 +6,9 @@ A browser-based terminal hacking roguelike. Procedurally generated networks, puz
 - Lit web components
 - TypeScript
 - Vite
-- Supabase (leaderboards)
-- Cloudflare Pages
+- Cloudflare Pages (static `dist/` publish)
+- Local leaderboard via `localStorage` (this browser only)
+- Supabase client/schema scaffolding exists but is **not wired** into gameplay or the UI leaderboard
 
 ## Engine + puzzle architecture
 
@@ -25,7 +26,34 @@ A browser-based terminal hacking roguelike. Procedurally generated networks, puz
 - Randomized puzzles consume injectable RNG (`src/puzzles/rng.ts`) so tests can run deterministically.
 - Puzzles should self-manage cleanup/disposal (especially timers) to avoid post-exit emissions.
 
-## Deployment expectations (Vite + Pages + Supabase)
+## Operator-facing truth (read this)
+
+### Leaderboard
+- The boot-screen **TOP RUNS (LOCAL)** panel reads/writes `localStorage` only (`src/lib/leaderboard.ts`).
+- There is no online/global leaderboard in the running app today.
+- `supabase/schema.sql` and `src/lib/supabase.ts` / `src/lib/runSave.ts` are unused scaffolding. Setting `VITE_SUPABASE_*` does not change leaderboard behavior until something calls those helpers.
+
+### Continue Run
+- **Continue Run** restores level, score, lives, streak, and seed from the local save.
+- It does **not** resume mid-level map progress. The current level regenerates from the run seed; timer and breach count reset for that level restart.
+- Tooltip/aria on the button and the terminal continue notice say the same thing.
+
+### Terminal commands (implemented)
+| Context | Commands |
+| --- | --- |
+| Idle (no puzzle) | `help`, `seed`, `replay <seed>` |
+| Active puzzle | `help`, `hint`, or type the answer |
+| Game over | `help`, `restart`, `replay <seed>`, `menu` |
+
+Type `help` in-game for the same list. Docs that mention other commands are wrong.
+
+### Trace meter
+- Trace rises on puzzle failure. At **100%** the run ends (`Trace meter reached 100%.`). Lives at 0 and timer at 0 also end the run.
+
+### Invalid seed on boot
+- Bad seed input is reported in the boot copy. It is not a silent no-op (there is no terminal on the boot screen).
+
+## Deployment expectations (Vite + Pages)
 
 ### 1) Build and static output
 - Vite build output is `dist/`.
@@ -48,12 +76,12 @@ npm run pages:deploy
 - `wrangler.toml` should point at the Pages project used for this repo.
 - Treat Pages deployment as immutable static publish from the current build output.
 
-### 3) Supabase integration expectations
-- Leaderboard writes/reads depend on Supabase browser env vars configured at build/runtime:
+### 3) Optional Supabase scaffolding (not required to play)
+- Env vars in `.env.example`:
   - `VITE_SUPABASE_URL`
   - `VITE_SUPABASE_ANON_KEY`
-- Keep `.env.example` aligned with required variables.
-- Without valid Supabase env vars, local gameplay should still run, but leaderboard operations will fail gracefully.
+- Without them, gameplay and the **local** leaderboard still work.
+- With them, the unused `src/lib/runSave.ts` helpers can talk to Supabase if you call them yourself; the app UI does not.
 
 ### 4) PR/release hygiene
 - Before pushing deployment-related changes, run:
@@ -66,7 +94,7 @@ npm run build
 - If puzzle or engine behavior changes, add/update Vitest coverage in `src/engine/*.test.ts` and `src/puzzles/*.test.ts`.
 
 ## Puzzle input quick reference
-During an active puzzle, submit answers directly in the terminal. Type `hint` at any time to request the puzzle's next hint.
+During an active puzzle, submit answers directly in the terminal. Type `hint` at any time to request the puzzle's next hint. Type `help` for command lists (does not count as an answer).
 
 ### LogicGatePuzzle
 - **Prompt:** `A=<0|1> B=<0|1> -> [GATE] -> ... -> ?`
@@ -87,7 +115,7 @@ During an active puzzle, submit answers directly in the terminal. Type `hint` at
   - non-numeric input: rejected with feedback, **does not consume** attempts
   - wrong numeric port: consumes one attempt
   - after 3 wrong numeric attempts: puzzle hard-fails and locks out
-- **Hint behavior:** identifies vulnerable service and the last digit of its low-numbered port.
+- **Hint behavior:** identifies vulnerable service and the last digit of its port.
 
 ### MemoryMatrixPuzzle
 - **Prompt:** 4x4 symbol matrix shown briefly, then hidden
@@ -96,7 +124,7 @@ During an active puzzle, submit answers directly in the terminal. Type `hint` at
   - separators: `=` or `:` (both accepted)
 - **Wrong input behavior:**
   - before concealment: rejected (`wait for concealment`)
-  - malformed/duplicate entries: rejected
+  - malformed/duplicate entries: rejected with feedback; attempt not consumed
   - valid but incorrect reconstruction: consumes one attempt; fails after 3 incorrect attempts
 - **Hint behavior:** unavailable until hidden; then reveals one correct cell per `hint` call in deterministic order.
 
@@ -104,7 +132,7 @@ During an active puzzle, submit answers directly in the terminal. Type `hint` at
 - **Prompt:** crack a 4-digit PIN with symbol feedback
 - **Expected input:** exactly 4 digits (`0000`-`9999`)
 - **Wrong input behavior:**
-  - invalid format (not 4 digits): rejected, no guess consumed
+  - invalid format (not 4 digits): rejected with feedback, no guess consumed
   - wrong 4-digit guess: consumes a guess and prints feedback:
     - `■` right digit/right place
     - `□` right digit/wrong place
@@ -116,14 +144,14 @@ During an active puzzle, submit answers directly in the terminal. Type `hint` at
 - `hint` is only available while a puzzle is active.
 - Hints are puzzle-specific and generally progressive (each call reveals additional information).
 - Hints do **not** directly reduce score or lives.
-- You can still lose runs through puzzle-specific fail conditions, time pressure, and failure penalties.
+- You can still lose runs through puzzle-specific fail conditions, time pressure, trace saturation, and failure penalties.
 
 ## Development
 ```bash
 npm install
 npm run dev       # http://localhost:5173
 npm run build     # production build
-npm run test      # vitest
+npm run test      # vitest (watch locally; CI runs once)
 ```
 
 ## Part of

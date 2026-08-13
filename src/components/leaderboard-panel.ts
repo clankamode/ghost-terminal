@@ -47,11 +47,12 @@ export class LeaderboardPanel extends LitElement {
     return html`
       <section class="panel" aria-label="Leaderboard">
         <header class="head">
-          <h2>TOP RUNS</h2>
+          <h2>TOP RUNS (LOCAL)</h2>
           <button type="button" @click=${this.onClear}>CLEAR</button>
         </header>
+        <p class="scope">Scores are stored in this browser only. Online/Supabase leaderboards are not wired.</p>
         ${this.entries.length === 0
-          ? html`<p class="empty">No runs yet</p>`
+          ? html`<p class="empty">No local runs yet</p>`
           : html`
               <table>
                 <thead>
@@ -138,6 +139,13 @@ export class LeaderboardPanel extends LitElement {
     .top-rank td {
       color: #ffda66;
       font-weight: 700;
+    }
+
+    .scope {
+      margin: 0 0 0.5rem;
+      font-size: 0.75rem;
+      color: #7aa87d;
+      line-height: 1.35;
     }
 
     .empty {

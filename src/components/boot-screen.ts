@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
+import { CONTINUE_BUTTON_LABEL, CONTINUE_BUTTON_TITLE } from '../app/continueRunCopy';
 
 const BOOT_LINES: string[] = [
   'GH0ST-OS BIOS v3.7.2',
@@ -120,7 +121,14 @@ export class BootScreen extends LitElement {
             <div class="actions">
               <button type="button" @click=${this.onNewGame}>Start New Run</button>
               ${this.hasContinue
-                ? html`<button type="button" @click=${this.onContinueGame}>Continue Game</button>`
+                ? html`<button
+                      type="button"
+                      title=${CONTINUE_BUTTON_TITLE}
+                      aria-label=${CONTINUE_BUTTON_TITLE}
+                      @click=${this.onContinueGame}
+                    >
+                      ${CONTINUE_BUTTON_LABEL}
+                    </button>`
                 : null}
               <input
                 type="text"

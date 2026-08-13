@@ -80,7 +80,8 @@ const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
 if (!hasSupabaseConfig) {
   console.warn(
-    'Supabase env vars are missing. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable online features.'
+    'Supabase env vars are missing. Gameplay and the local leaderboard do not require them. ' +
+      'VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY only matter if you wire the unused online helpers in src/lib/runSave.ts.',
   );
 }
 
