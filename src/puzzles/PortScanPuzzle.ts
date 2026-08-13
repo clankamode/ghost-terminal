@@ -100,7 +100,7 @@ export class PortScanPuzzle extends BasePuzzle {
       return 'No hint available.';
     }
 
-    return `Hint: Vulnerable service ${vulnerable.service} is on a low-numbered port ending in ${vulnerable.port % 10}.`;
+    return `Hint: Vulnerable service ${vulnerable.service} is on a port ending in ${vulnerable.port % 10}.`;
   }
 
   getPorts(): PortEntry[] {

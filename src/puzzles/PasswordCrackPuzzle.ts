@@ -30,6 +30,11 @@ export class PasswordCrackPuzzle extends BasePuzzle {
   solve(input: string): boolean {
     const guess = this.normalizeInput(input);
     if (!/^\d{4}$/.test(guess)) {
+      this.dispatchEvent(
+        new CustomEvent<string>('terminal-feedback', {
+          detail: 'PIN must be exactly 4 digits. Guess not consumed.',
+        }),
+      );
       return false;
     }
 
