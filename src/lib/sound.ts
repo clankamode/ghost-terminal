@@ -26,6 +26,33 @@ export class SoundManager {
     void this.playInternal(name);
   }
 
+  /** Keystroke blip used by the terminal; respects the same mute toggle as game SFX. */
+  playTypingBlip(): void {
+    if (!this.enabled) {
+      return;
+    }
+
+    void this.playTypingBlipInternal();
+  }
+
+  private async playTypingBlipInternal(): Promise<void> {
+    const context = await this.ensureContext();
+    if (!context) {
+      return;
+    }
+
+    const osc = context.createOscillator();
+    const gain = context.createGain();
+    osc.type = 'square';
+    osc.frequency.value = 880;
+    gain.gain.value = 0.003;
+    osc.connect(gain);
+    gain.connect(context.destination);
+    const now = context.currentTime;
+    osc.start(now);
+    osc.stop(now + 0.012);
+  }
+
   private async playInternal(name: SoundName): Promise<void> {
     const context = await this.ensureContext();
     if (!context) {

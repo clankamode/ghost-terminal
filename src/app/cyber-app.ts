@@ -25,7 +25,8 @@ import {
 } from './gameOverFlow';
 import { resolvePuzzleFail } from './failResolution';
 import { formatTerminalHelp } from './terminalHelp';
-import { formatContinueRunNotice } from './continueRunCopy';
+import { formatContinueRunNotice, MISSING_CONTINUE_SAVE_NOTICE } from './continueRunCopy';
+import { shouldPrintAccessDenied } from './puzzleAttemptFeedback';
 
 type AppPhase = 'boot' | 'game';
 
@@ -70,6 +71,8 @@ export class CyberApp extends LitElement {
   private activePuzzle: BasePuzzle | null = null;
   private activeTarget: HackTarget | null = null;
   private timerId?: number;
+  /** Set when the active puzzle emits terminal-feedback during the current solve attempt. */
+  private puzzleFeedbackThisSolve = false;
 
   constructor() {
     super();
@@ -353,15 +356,15 @@ export class CyberApp extends LitElement {
   };
 
   private onContinueGame = (): void => {
-    soundManager.play('start');
     const saved = this.store.loadSavedGame();
     if (!saved) {
-      // Continue was offered but storage disappeared; start fresh without pretending we resumed.
+      // Continue was offered but storage disappeared — start fresh and say so.
       this.bootNotice = null;
-      this.startRunWithSeed(createRunSeed());
+      this.startRunWithSeed(createRunSeed(), { missingContinueSave: true });
       return;
     }
 
+    soundManager.play('start');
     const runSeed = saved.runSeed ?? createRunSeed();
     this.configureRunRng(runSeed);
     this.lastRunSummary = null;
@@ -387,7 +390,7 @@ export class CyberApp extends LitElement {
     });
   };
 
-  private startRunWithSeed(seed: number): void {
+  private startRunWithSeed(seed: number, options?: { missingContinueSave?: boolean }): void {
     soundManager.play('start');
     this.configureRunRng(seed);
     this.lastRunSummary = null;
@@ -401,7 +404,11 @@ export class CyberApp extends LitElement {
       runSeed: seed,
     });
     this.phase = 'game';
-    this.startLevel({ lives: 3, streak: 0 });
+    this.startLevel({
+      lives: 3,
+      streak: 0,
+      missingContinueSave: options?.missingContinueSave,
+    });
   }
 
   private configureRunRng(seed: number): void {
@@ -413,6 +420,7 @@ export class CyberApp extends LitElement {
     lives?: number;
     streak?: number;
     continueNotice?: boolean;
+    missingContinueSave?: boolean;
   }): void {
     this.stopClock();
     this.teardownPuzzle();
@@ -448,6 +456,9 @@ export class CyberApp extends LitElement {
         return;
       }
       terminal.clear();
+      if (options?.missingContinueSave) {
+        terminal.printLine(MISSING_CONTINUE_SAVE_NOTICE, '#ffb366');
+      }
       if (options?.continueNotice) {
         for (const line of formatContinueRunNotice(currentLevel)) {
           terminal.printLine(line, '#ffb366');
@@ -518,6 +529,7 @@ export class CyberApp extends LitElement {
     const feedbackHandler = (puzzleEvent: Event): void => {
       const detail = (puzzleEvent as CustomEvent<string>).detail;
       if (detail) {
+        this.puzzleFeedbackThisSolve = true;
         terminal.printLine(detail, '#f0d37a');
       }
     };
@@ -611,8 +623,15 @@ export class CyberApp extends LitElement {
       return;
     }
 
+    this.puzzleFeedbackThisSolve = false;
     const solved = this.activePuzzle.solve(command);
-    if (!solved) {
+    if (
+      shouldPrintAccessDenied({
+        solved,
+        puzzleStillActive: this.activePuzzle !== null,
+        puzzleProvidedFeedback: this.puzzleFeedbackThisSolve,
+      })
+    ) {
       terminal.printLine('Access denied. Try again or type `hint`.', '#ffb366');
     }
   };

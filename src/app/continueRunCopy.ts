@@ -6,6 +6,10 @@ export function formatContinueRunNotice(level: number): string[] {
   ];
 }
 
+/** When Continue was offered but the save disappeared before click. */
+export const MISSING_CONTINUE_SAVE_NOTICE =
+  'No saved run found — started a new run instead of continuing.';
+
 export const CONTINUE_BUTTON_LABEL = 'Continue Run';
 export const CONTINUE_BUTTON_TITLE =
   'Restores level, score, lives, streak, and seed. Regenerates the current level map (does not resume mid-level breaches).';
