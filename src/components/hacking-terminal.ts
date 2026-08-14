@@ -1,5 +1,6 @@
 import { LitElement, css, html } from 'lit';
 import { customElement, property, query } from 'lit/decorators.js';
+import { soundManager } from '../lib/sound';
 
 type TerminalLine = {
   text: string;
@@ -19,7 +20,6 @@ export class HackingTerminal extends LitElement {
 
   private history: TerminalLine[] = [];
   private command = '';
-  private audioContext?: AudioContext;
 
   static styles = css`
     :host {
@@ -219,30 +219,8 @@ export class HackingTerminal extends LitElement {
     if (this.disabled) {
       return;
     }
-    try {
-      const Ctx = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctx) {
-        return;
-      }
-      if (!this.audioContext) {
-        this.audioContext = new Ctx();
-      }
-      if (this.audioContext.state === 'suspended') {
-        this.audioContext.resume().catch(() => undefined);
-      }
-      const osc = this.audioContext.createOscillator();
-      const gain = this.audioContext.createGain();
-      osc.type = 'square';
-      osc.frequency.value = 880;
-      gain.gain.value = 0.003;
-      osc.connect(gain);
-      gain.connect(this.audioContext.destination);
-      const now = this.audioContext.currentTime;
-      osc.start(now);
-      osc.stop(now + 0.012);
-    } catch {
-      // Typing audio is optional.
-    }
+    // Same mute gate as HUD sound toggle / game SFX — do not play while muted.
+    soundManager.playTypingBlip();
   }
 }
 
